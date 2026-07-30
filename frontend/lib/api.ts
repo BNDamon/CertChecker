@@ -20,6 +20,16 @@ async function authedFetch(path: string, init: RequestInit = {}) {
     },
   });
 
+  if (res.status === 401) {
+    // The locally cached session looks present but the backend rejected it --
+    // e.g. it was revoked server-side (password change, manual sign-out
+    // elsewhere). Clear it and send the user back to sign in rather than
+    // letting every caller hit an "Invalid session" error individually.
+    await supabase.auth.signOut();
+    if (typeof window !== 'undefined') window.location.href = '/login';
+    throw new Error('Session expired -- redirecting to sign in');
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? `Request failed with status ${res.status}`);

@@ -8,6 +8,7 @@ export function useMe() {
   const { session } = useSession();
   const [me, setMe] = useState<MeInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!session) return;
@@ -15,6 +16,9 @@ export function useMe() {
     try {
       const info = await getMe();
       setMe(info);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load account info');
     } finally {
       setLoading(false);
     }
@@ -24,5 +28,5 @@ export function useMe() {
     if (session) refresh();
   }, [session, refresh]);
 
-  return { me, loading, refresh };
+  return { me, loading, error, refresh };
 }
