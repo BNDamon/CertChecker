@@ -1,7 +1,15 @@
 'use client';
 
-import { ShieldIcon, GlobeIcon, SparklesIcon } from './icons';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { ShieldIcon, GlobeIcon, SettingsIcon, CreditCardIcon, SparklesIcon } from './icons';
 import { UpgradeButton } from './UpgradeButton';
+
+const NAV_ITEMS = [
+  { href: '/dashboard', label: 'Domains', icon: GlobeIcon },
+  { href: '/billing', label: 'Billing', icon: CreditCardIcon },
+  { href: '/settings', label: 'Settings', icon: SettingsIcon },
+];
 
 export function Sidebar({
   email,
@@ -12,6 +20,8 @@ export function Sidebar({
   isPro: boolean;
   onSignOut: () => void;
 }) {
+  const pathname = usePathname();
+
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col self-start overflow-y-auto border-r border-slate-800 bg-slate-950/60 px-4 py-5">
       <div className="mb-8 flex items-center gap-2 px-1">
@@ -22,10 +32,21 @@ export function Sidebar({
       </div>
 
       <nav className="flex-1 space-y-1">
-        <div className="flex items-center gap-2.5 rounded-lg bg-slate-800/60 px-3 py-2 text-sm font-medium text-white">
-          <GlobeIcon className="h-4 w-4" />
-          Domains
-        </div>
+        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href;
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                active ? 'bg-slate-800/60 text-white' : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="space-y-3 border-t border-slate-800 pt-4">

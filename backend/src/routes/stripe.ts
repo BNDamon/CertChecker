@@ -33,6 +33,25 @@ stripeRouter.post('/create-checkout-session', asyncHandler(async (req, res) => {
   res.json({ url: session.url });
 }));
 
+stripeRouter.post('/create-portal-session', asyncHandler(async (req, res) => {
+  const { rows } = await pool.query(
+    `select stripe_customer_id from public.users where id = $1`,
+    [req.user!.id]
+  );
+  const customerId: string | undefined = rows[0]?.stripe_customer_id;
+
+  if (!customerId) {
+    return res.status(400).json({ error: 'No billing account yet -- subscribe to Pro first.' });
+  }
+
+  const portalSession = await stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: `${env.frontendUrl}/billing`,
+  });
+
+  res.json({ url: portalSession.url });
+}));
+
 // NOT mounted under stripeRouter/requireAuth -- Stripe calls this directly and
 // signature verification (below) is the auth for this endpoint. It must
 // receive the raw request body, so it's wired up in index.ts with

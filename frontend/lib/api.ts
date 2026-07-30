@@ -65,3 +65,7 @@ export interface MeInfo {
 export function getMe(): Promise<MeInfo> {
   return authedFetch('/api/me');
 }
+
+export function createPortalSession(): Promise<{ url: string }> {
+  return authedFetch('/api/stripe/create-portal-session', { method: 'POST' });
+}
