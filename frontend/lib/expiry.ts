@@ -1,15 +1,17 @@
+export type UrgencyTone = 'ok' | 'warning' | 'danger' | 'expired' | 'unknown';
+
 export function daysUntil(dateString: string | null): number | null {
   if (!dateString) return null;
   const ms = new Date(dateString).getTime() - Date.now();
   return Math.floor(ms / (1000 * 60 * 60 * 24));
 }
 
-export function urgencyClasses(days: number | null): string {
-  if (days === null) return 'text-gray-400';
-  if (days < 0) return 'text-red-700 font-semibold';
-  if (days <= 7) return 'text-red-600 font-semibold';
-  if (days <= 30) return 'text-amber-600 font-medium';
-  return 'text-green-600';
+export function urgencyTone(days: number | null): UrgencyTone {
+  if (days === null) return 'unknown';
+  if (days < 0) return 'expired';
+  if (days <= 7) return 'danger';
+  if (days <= 30) return 'warning';
+  return 'ok';
 }
 
 export function formatCountdown(days: number | null): string {

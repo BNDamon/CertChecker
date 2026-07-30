@@ -54,3 +54,14 @@ export function removeDomain(id: string): Promise<null> {
 export function createCheckoutSession(): Promise<{ url: string }> {
   return authedFetch('/api/stripe/create-checkout-session', { method: 'POST' });
 }
+
+export interface MeInfo {
+  email: string;
+  subscriptionStatus: 'free' | 'active' | 'past_due' | 'canceled';
+  domainCount: number;
+  freeTierDomainLimit: number;
+}
+
+export function getMe(): Promise<MeInfo> {
+  return authedFetch('/api/me');
+}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createCheckoutSession } from '@/lib/api';
+import { SparklesIcon } from './icons';
 
 export function UpgradeButton() {
   const [loading, setLoading] = useState(false);
@@ -21,9 +22,10 @@ export function UpgradeButton() {
     <button
       onClick={handleClick}
       disabled={loading}
-      className="rounded-md border border-blue-600 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+      className="inline-flex items-center gap-1.5 rounded-lg bg-accent-600 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-700 focus:outline-none focus:ring-2 focus:ring-accent-500/40 disabled:cursor-not-allowed disabled:opacity-50"
     >
-      {loading ? 'Redirecting...' : 'Upgrade to Pro -- $15/mo'}
+      <SparklesIcon className="h-4 w-4" />
+      {loading ? 'Redirecting…' : 'Upgrade to Pro'}
     </button>
   );
 }
