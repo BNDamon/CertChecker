@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState, FormEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { ShieldIcon } from '@/components/icons';
 
@@ -12,9 +12,20 @@ export const dynamic = 'force-dynamic';
 
 type Mode = 'sign-in' | 'sign-up' | 'forgot';
 
+// useSearchParams requires a Suspense boundary even on a force-dynamic page --
+// without it, Next's build-time prerender pass for this route fails outright.
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>('sign-in');
+  const searchParams = useSearchParams();
+  const [mode, setMode] = useState<Mode>(searchParams.get('mode') === 'sign-up' ? 'sign-up' : 'sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);

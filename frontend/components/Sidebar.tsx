@@ -60,12 +60,17 @@ export function Sidebar({
           <UpgradeButton />
         )}
         <p className="truncate px-1 text-xs text-slate-400">{email}</p>
-        <button
-          onClick={onSignOut}
-          className="w-full rounded-lg px-1 py-1 text-left text-xs text-slate-500 transition-colors hover:text-slate-300"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center justify-between px-1">
+          <Link href="/support" className="text-xs text-slate-500 transition-colors hover:text-slate-300">
+            Support
+          </Link>
+          <button
+            onClick={onSignOut}
+            className="text-xs text-slate-500 transition-colors hover:text-slate-300"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     </aside>
   );
