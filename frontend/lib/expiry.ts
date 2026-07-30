@@ -20,3 +20,10 @@ export function formatCountdown(days: number | null): string {
   if (days === 0) return 'Expires today';
   return `${days}d left`;
 }
+
+/** Smallest of the two day counts (ignoring nulls), used to rank urgency. */
+export function mostUrgentDays(a: number | null, b: number | null): number | null {
+  if (a === null) return b;
+  if (b === null) return a;
+  return Math.min(a, b);
+}

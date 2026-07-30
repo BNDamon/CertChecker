@@ -2,12 +2,11 @@ import type { UrgencyTone } from '@/lib/expiry';
 import { CheckCircleIcon, AlertTriangleIcon, XCircleIcon } from './icons';
 
 const TONE_STYLES: Record<UrgencyTone, string> = {
-  ok: 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20',
-  warning:
-    'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20',
-  danger: 'bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20',
-  expired: 'bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20',
-  unknown: 'bg-gray-100 text-gray-500 ring-gray-500/10 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700',
+  ok: 'bg-green-500/10 text-green-400 ring-green-500/25',
+  warning: 'bg-amber-500/10 text-amber-400 ring-amber-500/25',
+  danger: 'bg-red-500/10 text-red-400 ring-red-500/25',
+  expired: 'bg-red-500/10 text-red-400 ring-red-500/25',
+  unknown: 'bg-slate-700/40 text-slate-400 ring-slate-600/40',
 };
 
 const TONE_ICON: Record<UrgencyTone, typeof CheckCircleIcon> = {

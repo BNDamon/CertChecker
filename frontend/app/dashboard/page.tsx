@@ -1,15 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/useSession';
 import { supabase } from '@/lib/supabaseClient';
 import { listDomains, removeDomain, getMe, type TrackedDomain, type MeInfo } from '@/lib/api';
+import { daysUntil, mostUrgentDays } from '@/lib/expiry';
 import { DomainList } from '@/components/DomainList';
 import { AddDomainForm } from '@/components/AddDomainForm';
 import { UpgradeButton } from '@/components/UpgradeButton';
 import { UsageBar } from '@/components/UsageBar';
-import { ShieldIcon, SparklesIcon } from '@/components/icons';
+import { StatCard } from '@/components/StatCard';
+import { ShieldIcon, SparklesIcon, GlobeIcon, AlertTriangleIcon, XCircleIcon } from '@/components/icons';
 
 // Per-user dashboard driven entirely by client-side session state -- skip
 // build-time prerendering rather than have it fail when Supabase env vars
@@ -48,10 +50,33 @@ export default function DashboardPage() {
     if (session) refresh();
   }, [session, refresh]);
 
+  const sortedDomains = useMemo(() => {
+    return [...domains].sort((a, b) => {
+      const aDays = mostUrgentDays(daysUntil(a.ssl_expiry_date), daysUntil(a.domain_expiry_date));
+      const bDays = mostUrgentDays(daysUntil(b.ssl_expiry_date), daysUntil(b.domain_expiry_date));
+      if (aDays === null && bDays === null) return 0;
+      if (aDays === null) return 1;
+      if (bDays === null) return -1;
+      return aDays - bDays;
+    });
+  }, [domains]);
+
+  const stats = useMemo(() => {
+    let expiringSoon = 0;
+    let expired = 0;
+    for (const d of domains) {
+      const days = mostUrgentDays(daysUntil(d.ssl_expiry_date), daysUntil(d.domain_expiry_date));
+      if (days === null) continue;
+      if (days < 0) expired++;
+      else if (days <= 30) expiringSoon++;
+    }
+    return { total: domains.length, expiringSoon, expired };
+  }, [domains]);
+
   if (sessionLoading || !session) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-gray-500 dark:text-zinc-400">Loading…</p>
+        <p className="text-sm text-slate-400">Loading…</p>
       </main>
     );
   }
@@ -70,39 +95,48 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3.5">
+      <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-600 text-white">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent-500 to-indigo-600 text-white">
               <ShieldIcon className="h-4 w-4" />
             </div>
-            <span className="text-sm font-semibold tracking-tight">CertChecker</span>
+            <span className="text-sm font-semibold tracking-tight text-white">CertChecker</span>
           </div>
           <div className="flex items-center gap-3">
             {isPro && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2.5 py-1 text-xs font-medium text-accent-700 ring-1 ring-inset ring-accent-600/20 dark:bg-accent-500/10 dark:text-accent-300 dark:ring-accent-500/20">
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent-500/10 px-2.5 py-1 text-xs font-medium text-accent-300 ring-1 ring-inset ring-accent-500/25">
                 <SparklesIcon className="h-3.5 w-3.5" />
                 Pro
               </span>
             )}
             {!isPro && <UpgradeButton />}
-            <button
-              onClick={handleSignOut}
-              className="text-sm text-gray-500 transition-colors hover:text-gray-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-            >
+            <button onClick={handleSignOut} className="text-sm text-slate-400 transition-colors hover:text-slate-200">
               Sign out
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-8">
+      <main className="mx-auto max-w-5xl px-4 py-8">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Tracked domains</h1>
-            <p className="mt-0.5 text-sm text-gray-500 dark:text-zinc-400">{session.user.email}</p>
+            <h1 className="text-xl font-semibold tracking-tight text-white">Tracked domains</h1>
+            <p className="mt-0.5 text-sm text-slate-400">{session.user.email}</p>
           </div>
           {me && !isPro && <UsageBar count={me.domainCount} limit={me.freeTierDomainLimit} />}
+        </div>
+
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard label="Tracked domains" value={stats.total} icon={GlobeIcon} tone="default" />
+          <StatCard label="Expiring soon" value={stats.expiringSoon} icon={AlertTriangleIcon} tone="warning" />
+          <StatCard label="Expired" value={stats.expired} icon={XCircleIcon} tone="danger" />
+          <StatCard
+            label={isPro ? 'Plan' : 'Free tier usage'}
+            value={isPro ? 'Pro' : `${me?.domainCount ?? 0}/${me?.freeTierDomainLimit ?? '–'}`}
+            icon={SparklesIcon}
+            tone="accent"
+          />
         </div>
 
         <div className="mb-6">
@@ -110,15 +144,15 @@ export default function DashboardPage() {
         </div>
 
         {error && (
-          <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-400">
+          <p className="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400 ring-1 ring-inset ring-red-500/20">
             {error}
           </p>
         )}
 
         {loadingDomains ? (
-          <p className="text-sm text-gray-500 dark:text-zinc-400">Loading domains…</p>
+          <p className="text-sm text-slate-400">Loading domains…</p>
         ) : (
-          <DomainList domains={domains} onRemove={handleRemove} />
+          <DomainList domains={sortedDomains} onRemove={handleRemove} />
         )}
       </main>
     </div>
