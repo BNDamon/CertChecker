@@ -81,6 +81,28 @@ domainsRouter.post('/', asyncHandler(async (req, res) => {
   }
 }));
 
+domainsRouter.get('/:id', asyncHandler(async (req, res) => {
+  const { rows: domainRows } = await pool.query(
+    `select id, domain, added_at from public.tracked_domains where id = $1 and user_id = $2`,
+    [req.params.id, req.user!.id]
+  );
+
+  if (domainRows.length === 0) {
+    return res.status(404).json({ error: 'Domain not found' });
+  }
+
+  const { rows: history } = await pool.query(
+    `select checked_at, ssl_expiry_date, domain_expiry_date, ssl_status, domain_status
+     from public.check_results
+     where domain_id = $1
+     order by checked_at desc
+     limit 50`,
+    [req.params.id]
+  );
+
+  res.json({ domain: domainRows[0], history });
+}));
+
 domainsRouter.delete('/:id', asyncHandler(async (req, res) => {
   const { rowCount } = await pool.query(
     `delete from public.tracked_domains where id = $1 and user_id = $2`,

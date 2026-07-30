@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShieldIcon, GlobeIcon, SettingsIcon, CreditCardIcon, SparklesIcon } from './icons';
+import { ShieldIcon, GlobeIcon, SettingsIcon, CreditCardIcon, SparklesIcon, BellIcon } from './icons';
 import { UpgradeButton } from './UpgradeButton';
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Domains', icon: GlobeIcon },
-  { href: '/billing', label: 'Billing', icon: CreditCardIcon },
-  { href: '/settings', label: 'Settings', icon: SettingsIcon },
+  { href: '/dashboard', label: 'Domains', icon: GlobeIcon, match: (path: string) => path === '/dashboard' || path.startsWith('/domains') },
+  { href: '/alerts', label: 'Alerts', icon: BellIcon, match: (path: string) => path === '/alerts' },
+  { href: '/billing', label: 'Billing', icon: CreditCardIcon, match: (path: string) => path === '/billing' },
+  { href: '/settings', label: 'Settings', icon: SettingsIcon, match: (path: string) => path === '/settings' },
 ];
 
 export function Sidebar({
@@ -32,8 +33,8 @@ export function Sidebar({
       </div>
 
       <nav className="flex-1 space-y-1">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
+        {NAV_ITEMS.map(({ href, label, icon: Icon, match }) => {
+          const active = match(pathname ?? '');
           return (
             <Link
               key={href}

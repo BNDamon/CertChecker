@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { TrackedDomain } from '@/lib/api';
 import { daysUntil, urgencyTone, formatCountdown } from '@/lib/expiry';
 import { StatusBadge } from './StatusBadge';
@@ -59,10 +60,10 @@ export function DomainList({
               key={d.id}
               className="group grid grid-cols-[1fr,140px,140px,120px,40px] items-center gap-4 px-5 py-3.5 transition-colors hover:bg-slate-800/40"
             >
-              <div className="flex items-center gap-2.5 truncate">
+              <Link href={`/domains/${d.id}`} className="flex items-center gap-2.5 truncate hover:underline">
                 <GlobeIcon className="h-4 w-4 shrink-0 text-slate-500" />
                 <span className="truncate text-sm font-medium text-slate-100">{d.domain}</span>
-              </div>
+              </Link>
               <div>
                 <StatusBadge tone={sslTone} label={sslLabel(d, sslDays)} />
               </div>

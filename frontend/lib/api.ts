@@ -61,6 +61,36 @@ export function removeDomain(id: string): Promise<null> {
   return authedFetch(`/api/domains/${id}`, { method: 'DELETE' });
 }
 
+export interface CheckResult {
+  checked_at: string;
+  ssl_expiry_date: string | null;
+  domain_expiry_date: string | null;
+  ssl_status: 'ok' | 'expired' | 'error';
+  domain_status: 'ok' | 'expired' | 'error' | 'unknown';
+}
+
+export interface DomainDetail {
+  domain: { id: string; domain: string; added_at: string };
+  history: CheckResult[];
+}
+
+export function getDomainDetail(id: string): Promise<DomainDetail> {
+  return authedFetch(`/api/domains/${id}`);
+}
+
+export interface AlertRecord {
+  id: string;
+  alert_type: 'ssl' | 'domain';
+  threshold_days: number;
+  sent_at: string;
+  domain: string;
+  domain_id: string;
+}
+
+export function listAlerts(): Promise<{ alerts: AlertRecord[] }> {
+  return authedFetch('/api/alerts');
+}
+
 export function createCheckoutSession(): Promise<{ url: string }> {
   return authedFetch('/api/stripe/create-checkout-session', { method: 'POST' });
 }
