@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { listDomains, removeDomain, type TrackedDomain } from '@/lib/api';
+import { listDomains, removeDomain, getDomainStats, type TrackedDomain, type DomainStats } from '@/lib/api';
 import { useMe } from '@/lib/useMe';
 import { daysUntil, mostUrgentDays } from '@/lib/expiry';
 import { DomainList } from '@/components/DomainList';
@@ -9,19 +9,27 @@ import { AddDomainForm } from '@/components/AddDomainForm';
 import { UsageBar } from '@/components/UsageBar';
 import { StatCard } from '@/components/StatCard';
 import { NextUpCard } from '@/components/NextUpCard';
+import { Pagination } from '@/components/Pagination';
 import { SparklesIcon, GlobeIcon, AlertTriangleIcon, XCircleIcon } from '@/components/icons';
+
+const PAGE_SIZE = 10;
 
 export default function DashboardPage() {
   const { me, refresh: refreshMe } = useMe();
   const [domains, setDomains] = useState<TrackedDomain[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<DomainStats | null>(null);
   const [loadingDomains, setLoadingDomains] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (targetPage: number) => {
     setLoadingDomains(true);
     try {
-      const { domains } = await listDomains();
-      setDomains(domains);
+      const [domainsRes, statsRes] = await Promise.all([listDomains(targetPage, PAGE_SIZE), getDomainStats()]);
+      setDomains(domainsRes.domains);
+      setTotal(domainsRes.total);
+      setStats(statsRes);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load your domains');
@@ -31,9 +39,12 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    refresh(page);
+  }, [page, refresh]);
 
+  // Urgency ordering is only meaningful within the current page -- the
+  // "next up" card and stat counts (from getDomainStats) already cover the
+  // whole account regardless of which page is showing.
   const sortedDomains = useMemo(() => {
     return [...domains].sort((a, b) => {
       const aDays = mostUrgentDays(daysUntil(a.ssl_expiry_date), daysUntil(a.domain_expiry_date));
@@ -45,39 +56,15 @@ export default function DashboardPage() {
     });
   }, [domains]);
 
-  const stats = useMemo(() => {
-    let expiringSoon = 0;
-    let expired = 0;
-    for (const d of domains) {
-      const days = mostUrgentDays(daysUntil(d.ssl_expiry_date), daysUntil(d.domain_expiry_date));
-      if (days === null) continue;
-      if (days < 0) expired++;
-      else if (days <= 30) expiringSoon++;
-    }
-    return { total: domains.length, expiringSoon, expired };
-  }, [domains]);
-
-  const nextUp = useMemo(() => {
-    const top = sortedDomains[0];
-    if (!top) return null;
-    const sslDays = daysUntil(top.ssl_expiry_date);
-    const domainDays = daysUntil(top.domain_expiry_date);
-    const sslRank = sslDays === null ? Infinity : sslDays;
-    const domainRank = domainDays === null ? Infinity : domainDays;
-    if (sslRank === Infinity && domainRank === Infinity) return null;
-    return sslRank <= domainRank
-      ? { domain: top.domain, kind: 'ssl' as const, days: sslDays }
-      : { domain: top.domain, kind: 'domain' as const, days: domainDays };
-  }, [sortedDomains]);
-
   async function handleRemove(id: string) {
     await removeDomain(id);
-    refresh();
+    refresh(page);
     refreshMe();
   }
 
   async function handleAdded() {
-    await refresh();
+    setPage(1);
+    await refresh(1);
     refreshMe();
   }
 
@@ -91,9 +78,9 @@ export default function DashboardPage() {
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Tracked domains" value={stats.total} icon={GlobeIcon} tone="default" />
-        <StatCard label="Expiring soon" value={stats.expiringSoon} icon={AlertTriangleIcon} tone="warning" />
-        <StatCard label="Expired" value={stats.expired} icon={XCircleIcon} tone="danger" />
+        <StatCard label="Tracked domains" value={stats?.total ?? 0} icon={GlobeIcon} tone="default" />
+        <StatCard label="Expiring soon" value={stats?.expiringSoon ?? 0} icon={AlertTriangleIcon} tone="warning" />
+        <StatCard label="Expired" value={stats?.expired ?? 0} icon={XCircleIcon} tone="danger" />
         <StatCard
           label={isPro ? 'Plan' : 'Free tier usage'}
           value={isPro ? 'Pro' : `${me?.domainCount ?? 0}/${me?.freeTierDomainLimit ?? '–'}`}
@@ -102,7 +89,9 @@ export default function DashboardPage() {
         />
       </div>
 
-      {nextUp && <NextUpCard domain={nextUp.domain} kind={nextUp.kind} days={nextUp.days} />}
+      {stats?.nextUp && (
+        <NextUpCard domain={stats.nextUp.domain} kind={stats.nextUp.kind} days={stats.nextUp.days} />
+      )}
 
       <div className="mb-6">
         <AddDomainForm onAdded={handleAdded} />
@@ -117,7 +106,14 @@ export default function DashboardPage() {
       {loadingDomains ? (
         <p className="text-sm text-slate-400">Loading domains…</p>
       ) : (
-        <DomainList domains={sortedDomains} onRemove={handleRemove} />
+        <>
+          <DomainList domains={sortedDomains} onRemove={handleRemove} />
+          {total > 0 && (
+            <div className="mt-2 rounded-2xl border border-slate-800 bg-slate-900/60">
+              <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+            </div>
+          )}
+        </>
       )}
     </>
   );

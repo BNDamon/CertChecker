@@ -49,8 +49,25 @@ export interface TrackedDomain {
   domain_status: 'ok' | 'expired' | 'error' | 'unknown' | null;
 }
 
-export function listDomains(): Promise<{ domains: TrackedDomain[] }> {
-  return authedFetch('/api/domains');
+export interface Pagination {
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export function listDomains(page = 1, pageSize = 10): Promise<{ domains: TrackedDomain[] } & Pagination> {
+  return authedFetch(`/api/domains?page=${page}&pageSize=${pageSize}`);
+}
+
+export interface DomainStats {
+  total: number;
+  expiringSoon: number;
+  expired: number;
+  nextUp: { domain: string; kind: 'ssl' | 'domain'; days: number } | null;
+}
+
+export function getDomainStats(): Promise<DomainStats> {
+  return authedFetch('/api/domains/stats');
 }
 
 export function addDomain(domain: string): Promise<{ domain: TrackedDomain }> {
@@ -74,8 +91,12 @@ export interface DomainDetail {
   history: CheckResult[];
 }
 
-export function getDomainDetail(id: string): Promise<DomainDetail> {
-  return authedFetch(`/api/domains/${id}`);
+export function getDomainDetail(
+  id: string,
+  page = 1,
+  pageSize = 10
+): Promise<DomainDetail & Pagination> {
+  return authedFetch(`/api/domains/${id}?page=${page}&pageSize=${pageSize}`);
 }
 
 export interface AlertRecord {
@@ -87,8 +108,8 @@ export interface AlertRecord {
   domain_id: string;
 }
 
-export function listAlerts(): Promise<{ alerts: AlertRecord[] }> {
-  return authedFetch('/api/alerts');
+export function listAlerts(page = 1, pageSize = 20): Promise<{ alerts: AlertRecord[] } & Pagination> {
+  return authedFetch(`/api/alerts?page=${page}&pageSize=${pageSize}`);
 }
 
 export function createCheckoutSession(): Promise<{ url: string }> {

@@ -3,6 +3,7 @@ import { pool } from '../db/pool';
 import { requireAuth } from '../middleware/auth';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { env } from '../config/env';
+import { parsePagination } from '../utils/pagination';
 
 export const domainsRouter = Router();
 domainsRouter.use(requireAuth);
@@ -15,6 +16,13 @@ function normalizeDomain(raw: string): string | null {
 }
 
 domainsRouter.get('/', asyncHandler(async (req, res) => {
+  const { page, pageSize, offset } = parsePagination(req.query, 10);
+
+  const { rows: countRows } = await pool.query(
+    `select count(*)::int as count from public.tracked_domains where user_id = $1`,
+    [req.user!.id]
+  );
+
   const { rows } = await pool.query(
     `select
        d.id,
@@ -33,11 +41,12 @@ domainsRouter.get('/', asyncHandler(async (req, res) => {
        limit 1
      ) cr on true
      where d.user_id = $1
-     order by d.added_at desc`,
-    [req.user!.id]
+     order by d.added_at desc
+     limit $2 offset $3`,
+    [req.user!.id, pageSize, offset]
   );
 
-  res.json({ domains: rows });
+  res.json({ domains: rows, page, pageSize, total: countRows[0].count });
 }));
 
 domainsRouter.post('/', asyncHandler(async (req, res) => {
@@ -81,6 +90,53 @@ domainsRouter.post('/', asyncHandler(async (req, res) => {
   }
 }));
 
+// Registered before '/:id' -- otherwise Express would match "stats" as an id.
+//
+// This looks at every one of the user's domains regardless of pagination,
+// since the dashboard's summary counts and "next up" highlight need to
+// reflect the whole account, not just whatever page of the domain table
+// happens to be showing.
+domainsRouter.get('/stats', asyncHandler(async (req, res) => {
+  const { rows } = await pool.query(
+    `select d.id, d.domain, cr.ssl_expiry_date, cr.domain_expiry_date
+     from public.tracked_domains d
+     left join lateral (
+       select ssl_expiry_date, domain_expiry_date from public.check_results c
+       where c.domain_id = d.id
+       order by c.checked_at desc
+       limit 1
+     ) cr on true
+     where d.user_id = $1`,
+    [req.user!.id]
+  );
+
+  const now = Date.now();
+  const daysUntil = (date: string | null) =>
+    date === null ? null : Math.floor((new Date(date).getTime() - now) / 86_400_000);
+
+  let expiringSoon = 0;
+  let expired = 0;
+  let nextUp: { domain: string; kind: 'ssl' | 'domain'; days: number } | null = null;
+
+  for (const row of rows) {
+    const sslDays = daysUntil(row.ssl_expiry_date);
+    const domainDays = daysUntil(row.domain_expiry_date);
+    const candidates: { kind: 'ssl' | 'domain'; days: number }[] = [];
+    if (sslDays !== null) candidates.push({ kind: 'ssl', days: sslDays });
+    if (domainDays !== null) candidates.push({ kind: 'domain', days: domainDays });
+
+    for (const c of candidates) {
+      if (c.days < 0) expired++;
+      else if (c.days <= 30) expiringSoon++;
+      if (nextUp === null || c.days < nextUp.days) {
+        nextUp = { domain: row.domain, kind: c.kind, days: c.days };
+      }
+    }
+  }
+
+  res.json({ total: rows.length, expiringSoon, expired, nextUp });
+}));
+
 domainsRouter.get('/:id', asyncHandler(async (req, res) => {
   const { rows: domainRows } = await pool.query(
     `select id, domain, added_at from public.tracked_domains where id = $1 and user_id = $2`,
@@ -91,16 +147,23 @@ domainsRouter.get('/:id', asyncHandler(async (req, res) => {
     return res.status(404).json({ error: 'Domain not found' });
   }
 
+  const { page, pageSize, offset } = parsePagination(req.query, 10);
+
+  const { rows: countRows } = await pool.query(
+    `select count(*)::int as count from public.check_results where domain_id = $1`,
+    [req.params.id]
+  );
+
   const { rows: history } = await pool.query(
     `select checked_at, ssl_expiry_date, domain_expiry_date, ssl_status, domain_status
      from public.check_results
      where domain_id = $1
      order by checked_at desc
-     limit 50`,
-    [req.params.id]
+     limit $2 offset $3`,
+    [req.params.id, pageSize, offset]
   );
 
-  res.json({ domain: domainRows[0], history });
+  res.json({ domain: domainRows[0], history, page, pageSize, total: countRows[0].count });
 }));
 
 domainsRouter.delete('/:id', asyncHandler(async (req, res) => {

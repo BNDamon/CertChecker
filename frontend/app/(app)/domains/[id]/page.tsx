@@ -1,29 +1,61 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getDomainDetail, type DomainDetail } from '@/lib/api';
+import { getDomainDetail, type CheckResult } from '@/lib/api';
 import { daysUntil, urgencyTone, formatCountdown } from '@/lib/expiry';
 import { StatusBadge } from '@/components/StatusBadge';
+import { Pagination } from '@/components/Pagination';
 import { GlobeIcon, ShieldIcon } from '@/components/icons';
+
+const PAGE_SIZE = 10;
 
 export default function DomainDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const [detail, setDetail] = useState<DomainDetail | null>(null);
+
+  const [domainInfo, setDomainInfo] = useState<{ id: string; domain: string; added_at: string } | null>(null);
+  // The most recent check, independent of which history page is showing --
+  // the status cards up top should always reflect "now", not whatever page
+  // of history the user happens to be looking at.
+  const [latestCheck, setLatestCheck] = useState<CheckResult | null>(null);
+
+  const [history, setHistory] = useState<CheckResult[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getDomainDetail(params.id)
-      .then(setDetail)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load domain'))
-      .finally(() => setLoading(false));
+    getDomainDetail(params.id, 1, 1)
+      .then((res) => {
+        setDomainInfo(res.domain);
+        setLatestCheck(res.history[0] ?? null);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load domain'));
   }, [params.id]);
 
-  if (loading) return <p className="text-sm text-slate-400">Loading…</p>;
+  const refreshHistory = useCallback(
+    async (targetPage: number) => {
+      setLoading(true);
+      try {
+        const res = await getDomainDetail(params.id, targetPage, PAGE_SIZE);
+        setHistory(res.history);
+        setTotal(res.total);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load domain');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [params.id]
+  );
 
-  if (error || !detail) {
+  useEffect(() => {
+    refreshHistory(page);
+  }, [page, refreshHistory]);
+
+  if (error || (!loading && !domainInfo)) {
     return (
       <div>
         <p className="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400 ring-1 ring-inset ring-red-500/20">
@@ -36,9 +68,8 @@ export default function DomainDetailPage() {
     );
   }
 
-  const latest = detail.history[0];
-  const sslDays = latest ? daysUntil(latest.ssl_expiry_date) : null;
-  const domainDays = latest ? daysUntil(latest.domain_expiry_date) : null;
+  const sslDays = latestCheck ? daysUntil(latestCheck.ssl_expiry_date) : null;
+  const domainDays = latestCheck ? daysUntil(latestCheck.domain_expiry_date) : null;
 
   return (
     <>
@@ -54,9 +85,9 @@ export default function DomainDetailPage() {
           <GlobeIcon className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-white">{detail.domain.domain}</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-white">{domainInfo?.domain}</h1>
           <p className="text-xs text-slate-400">
-            Tracked since {new Date(detail.domain.added_at).toLocaleDateString()}
+            Tracked since {domainInfo ? new Date(domainInfo.added_at).toLocaleDateString() : '…'}
           </p>
         </div>
       </div>
@@ -67,15 +98,15 @@ export default function DomainDetailPage() {
             <ShieldIcon className="h-4 w-4 text-slate-400" />
             SSL certificate
           </div>
-          {latest ? (
+          {latestCheck ? (
             <>
               <StatusBadge
-                tone={latest.ssl_status === 'error' ? 'unknown' : urgencyTone(sslDays)}
-                label={latest.ssl_status === 'error' ? 'Check failed' : formatCountdown(sslDays)}
+                tone={latestCheck.ssl_status === 'error' ? 'unknown' : urgencyTone(sslDays)}
+                label={latestCheck.ssl_status === 'error' ? 'Check failed' : formatCountdown(sslDays)}
               />
-              {latest.ssl_expiry_date && (
+              {latestCheck.ssl_expiry_date && (
                 <p className="mt-2 text-xs text-slate-500">
-                  Expires {new Date(latest.ssl_expiry_date).toLocaleDateString()}
+                  Expires {new Date(latestCheck.ssl_expiry_date).toLocaleDateString()}
                 </p>
               )}
             </>
@@ -89,25 +120,25 @@ export default function DomainDetailPage() {
             <GlobeIcon className="h-4 w-4 text-slate-400" />
             Domain registration
           </div>
-          {latest ? (
+          {latestCheck ? (
             <>
               <StatusBadge
                 tone={
-                  latest.domain_status === 'error' || latest.domain_status === 'unknown'
+                  latestCheck.domain_status === 'error' || latestCheck.domain_status === 'unknown'
                     ? 'unknown'
                     : urgencyTone(domainDays)
                 }
                 label={
-                  latest.domain_status === 'error'
+                  latestCheck.domain_status === 'error'
                     ? 'Check failed'
-                    : latest.domain_status === 'unknown'
+                    : latestCheck.domain_status === 'unknown'
                       ? 'Unknown'
                       : formatCountdown(domainDays)
                 }
               />
-              {latest.domain_expiry_date && (
+              {latestCheck.domain_expiry_date && (
                 <p className="mt-2 text-xs text-slate-500">
-                  Expires {new Date(latest.domain_expiry_date).toLocaleDateString()}
+                  Expires {new Date(latestCheck.domain_expiry_date).toLocaleDateString()}
                 </p>
               )}
             </>
@@ -118,7 +149,7 @@ export default function DomainDetailPage() {
       </div>
 
       <h2 className="mb-3 text-sm font-semibold text-white">Check history</h2>
-      {detail.history.length === 0 ? (
+      {!loading && history.length === 0 ? (
         <p className="text-sm text-slate-400">No checks have run yet -- the daily job hasn&apos;t reached this domain.</p>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
@@ -128,7 +159,7 @@ export default function DomainDetailPage() {
             <span>Registration</span>
           </div>
           <div className="divide-y divide-slate-800/80">
-            {detail.history.map((h) => {
+            {history.map((h) => {
               const hSslDays = daysUntil(h.ssl_expiry_date);
               const hDomainDays = daysUntil(h.domain_expiry_date);
               return (
@@ -152,6 +183,7 @@ export default function DomainDetailPage() {
               );
             })}
           </div>
+          <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
         </div>
       )}
     </>

@@ -1,21 +1,37 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { listAlerts, type AlertRecord } from '@/lib/api';
+import { Pagination } from '@/components/Pagination';
 import { BellIcon, ShieldIcon, GlobeIcon } from '@/components/icons';
+
+const PAGE_SIZE = 20;
 
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    listAlerts()
-      .then((res) => setAlerts(res.alerts))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load alerts'))
-      .finally(() => setLoading(false));
+  const refresh = useCallback(async (targetPage: number) => {
+    setLoading(true);
+    try {
+      const res = await listAlerts(targetPage, PAGE_SIZE);
+      setAlerts(res.alerts);
+      setTotal(res.total);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load alerts');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    refresh(page);
+  }, [page, refresh]);
 
   return (
     <>
@@ -69,6 +85,7 @@ export default function AlertsPage() {
               </div>
             ))}
           </div>
+          <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
         </div>
       )}
     </>
