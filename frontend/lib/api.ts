@@ -64,6 +64,7 @@ export interface DomainStats {
   expiringSoon: number;
   expired: number;
   nextUp: { domain: string; kind: 'ssl' | 'domain'; days: number } | null;
+  healthBreakdown: { healthy: number; warning: number; critical: number; unknown: number };
 }
 
 export function getDomainStats(): Promise<DomainStats> {
@@ -110,6 +111,16 @@ export interface AlertRecord {
 
 export function listAlerts(page = 1, pageSize = 20): Promise<{ alerts: AlertRecord[] } & Pagination> {
   return authedFetch(`/api/alerts?page=${page}&pageSize=${pageSize}`);
+}
+
+export interface AlertTrendDay {
+  date: string;
+  ssl: number;
+  domain: number;
+}
+
+export function getAlertTrend(): Promise<{ trend: AlertTrendDay[] }> {
+  return authedFetch('/api/alerts/trend');
 }
 
 export function createCheckoutSession(): Promise<{ url: string }> {

@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShieldIcon, GlobeIcon, SettingsIcon, CreditCardIcon, SparklesIcon, BellIcon } from './icons';
+import { ShieldIcon, GlobeIcon, SettingsIcon, CreditCardIcon, SparklesIcon, BellIcon, BarChartIcon } from './icons';
 import { UpgradeButton } from './UpgradeButton';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Domains', icon: GlobeIcon, match: (path: string) => path === '/dashboard' || path.startsWith('/domains') },
+  { href: '/overview', label: 'Overview', icon: BarChartIcon, match: (path: string) => path === '/overview' },
   { href: '/alerts', label: 'Alerts', icon: BellIcon, match: (path: string) => path === '/alerts' },
   { href: '/billing', label: 'Billing', icon: CreditCardIcon, match: (path: string) => path === '/billing' },
   { href: '/settings', label: 'Settings', icon: SettingsIcon, match: (path: string) => path === '/settings' },

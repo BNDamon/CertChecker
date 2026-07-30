@@ -118,6 +118,12 @@ domainsRouter.get('/stats', asyncHandler(async (req, res) => {
   let expired = 0;
   let nextUp: { domain: string; kind: 'ssl' | 'domain'; days: number } | null = null;
 
+  // One bucket per domain (not per check-type) for the health-breakdown chart --
+  // takes the worst-case of its SSL and registration status, so these four
+  // counts sum to exactly `total` rather than double-counting a domain that's
+  // behind on both.
+  const healthBreakdown = { healthy: 0, warning: 0, critical: 0, unknown: 0 };
+
   for (const row of rows) {
     const sslDays = daysUntil(row.ssl_expiry_date);
     const domainDays = daysUntil(row.domain_expiry_date);
@@ -132,9 +138,20 @@ domainsRouter.get('/stats', asyncHandler(async (req, res) => {
         nextUp = { domain: row.domain, kind: c.kind, days: c.days };
       }
     }
+
+    const knownDays = candidates.map((c) => c.days);
+    if (knownDays.length === 0) {
+      healthBreakdown.unknown++;
+    } else if (knownDays.some((d) => d < 0)) {
+      healthBreakdown.critical++;
+    } else if (knownDays.some((d) => d <= 30)) {
+      healthBreakdown.warning++;
+    } else {
+      healthBreakdown.healthy++;
+    }
   }
 
-  res.json({ total: rows.length, expiringSoon, expired, nextUp });
+  res.json({ total: rows.length, expiringSoon, expired, nextUp, healthBreakdown });
 }));
 
 domainsRouter.get('/:id', asyncHandler(async (req, res) => {
