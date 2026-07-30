@@ -70,6 +70,31 @@ Runs on `http://localhost:3000`.
    a test-mode payment should flip `subscription_status` to `active` via the
    webhook, lifting the 3-domain free-tier cap.
 
+## Deployment
+
+- **Backend**: deployed to Railway (long-running process, required for
+  `node-cron` to actually fire -- serverless platforms won't keep the daily
+  job alive). Push to `master` and redeploy with `railway up` from `backend/`,
+  or connect the GitHub repo in the Railway dashboard for auto-deploys.
+  Env vars are managed with `railway variable set KEY=VALUE`.
+- **Frontend**: deployed to Vercel. `vercel --prod` from `frontend/` after
+  `vercel link`. Env vars managed with `vercel env add <name> production`.
+- **Stripe webhook**: production uses its own webhook endpoint (created via
+  `stripe webhook_endpoints create --url <backend-url>/api/stripe/webhook`)
+  with its own signing secret -- this is separate from the `stripe listen`
+  secret used for local dev, and both need to stay in sync with whatever
+  `STRIPE_WEBHOOK_SECRET` the running backend actually has configured.
+- After either deploy's public URL changes, update the *other* side:
+  `FRONTEND_URL` on Railway (used for CORS + Stripe redirect URLs) and
+  `NEXT_PUBLIC_API_URL` on Vercel (used for all backend API calls).
+
+### Before going live for real users
+
+- Switch Stripe from test mode to live keys + a live-mode webhook endpoint.
+- Verify a real sending domain in Resend (the sandbox sender can only
+  deliver to the email on the Resend account itself).
+- Consider a custom domain on Vercel instead of the `*.vercel.app` URL.
+
 ## Known v1 limitations (by design, to revisit)
 
 - **WHOIS parsing** (`backend/src/services/whoisCheck.ts`) has no universal
