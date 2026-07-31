@@ -41,6 +41,7 @@ async function authedFetch(path: string, init: RequestInit = {}) {
 export interface TrackedDomain {
   id: string;
   domain: string;
+  label: string | null;
   added_at: string;
   checked_at: string | null;
   ssl_expiry_date: string | null;
@@ -55,8 +56,14 @@ export interface Pagination {
   total: number;
 }
 
-export function listDomains(page = 1, pageSize = 10): Promise<{ domains: TrackedDomain[] } & Pagination> {
-  return authedFetch(`/api/domains?page=${page}&pageSize=${pageSize}`);
+export function listDomains(
+  page = 1,
+  pageSize = 10,
+  q = ''
+): Promise<{ domains: TrackedDomain[] } & Pagination> {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  if (q) params.set('q', q);
+  return authedFetch(`/api/domains?${params.toString()}`);
 }
 
 export interface DomainStats {
@@ -71,8 +78,12 @@ export function getDomainStats(): Promise<DomainStats> {
   return authedFetch('/api/domains/stats');
 }
 
-export function addDomain(domain: string): Promise<{ domain: TrackedDomain }> {
-  return authedFetch('/api/domains', { method: 'POST', body: JSON.stringify({ domain }) });
+export function addDomain(domain: string, label?: string): Promise<{ domain: TrackedDomain }> {
+  return authedFetch('/api/domains', { method: 'POST', body: JSON.stringify({ domain, label }) });
+}
+
+export function updateDomainLabel(id: string, label: string | null): Promise<{ domain: TrackedDomain }> {
+  return authedFetch(`/api/domains/${id}`, { method: 'PATCH', body: JSON.stringify({ label }) });
 }
 
 export function removeDomain(id: string): Promise<null> {
@@ -88,7 +99,7 @@ export interface CheckResult {
 }
 
 export interface DomainDetail {
-  domain: { id: string; domain: string; added_at: string };
+  domain: { id: string; domain: string; label: string | null; added_at: string };
   history: CheckResult[];
 }
 

@@ -17,16 +17,22 @@ function normalizeDomain(raw: string): string | null {
 
 domainsRouter.get('/', asyncHandler(async (req, res) => {
   const { page, pageSize, offset } = parsePagination(req.query, 10);
+  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  const searchParam = `%${q}%`;
 
   const { rows: countRows } = await pool.query(
-    `select count(*)::int as count from public.tracked_domains where user_id = $1`,
-    [req.user!.id]
+    `select count(*)::int as count
+     from public.tracked_domains
+     where user_id = $1
+       and ($2 = '' or domain ilike $3 or label ilike $3)`,
+    [req.user!.id, q, searchParam]
   );
 
   const { rows } = await pool.query(
     `select
        d.id,
        d.domain,
+       d.label,
        d.added_at,
        cr.checked_at,
        cr.ssl_expiry_date,
@@ -41,9 +47,10 @@ domainsRouter.get('/', asyncHandler(async (req, res) => {
        limit 1
      ) cr on true
      where d.user_id = $1
+       and ($2 = '' or d.domain ilike $3 or d.label ilike $3)
      order by d.added_at desc
-     limit $2 offset $3`,
-    [req.user!.id, pageSize, offset]
+     limit $4 offset $5`,
+    [req.user!.id, q, searchParam, pageSize, offset]
   );
 
   res.json({ domains: rows, page, pageSize, total: countRows[0].count });
@@ -54,6 +61,8 @@ domainsRouter.post('/', asyncHandler(async (req, res) => {
   if (!domain) {
     return res.status(400).json({ error: 'Provide a valid domain, e.g. example.com' });
   }
+
+  const label = typeof req.body?.label === 'string' && req.body.label.trim() ? req.body.label.trim() : null;
 
   const { rows: userRows } = await pool.query(
     `select subscription_status from public.users where id = $1`,
@@ -76,10 +85,10 @@ domainsRouter.post('/', asyncHandler(async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      `insert into public.tracked_domains (user_id, domain)
-       values ($1, $2)
-       returning id, domain, added_at`,
-      [req.user!.id, domain]
+      `insert into public.tracked_domains (user_id, domain, label)
+       values ($1, $2, $3)
+       returning id, domain, label, added_at`,
+      [req.user!.id, domain, label]
     );
     res.status(201).json({ domain: rows[0] });
   } catch (err: any) {
@@ -156,7 +165,7 @@ domainsRouter.get('/stats', asyncHandler(async (req, res) => {
 
 domainsRouter.get('/:id', asyncHandler(async (req, res) => {
   const { rows: domainRows } = await pool.query(
-    `select id, domain, added_at from public.tracked_domains where id = $1 and user_id = $2`,
+    `select id, domain, label, added_at from public.tracked_domains where id = $1 and user_id = $2`,
     [req.params.id, req.user!.id]
   );
 
@@ -181,6 +190,28 @@ domainsRouter.get('/:id', asyncHandler(async (req, res) => {
   );
 
   res.json({ domain: domainRows[0], history, page, pageSize, total: countRows[0].count });
+}));
+
+domainsRouter.patch('/:id', asyncHandler(async (req, res) => {
+  const rawLabel = req.body?.label;
+  if (rawLabel !== null && typeof rawLabel !== 'string') {
+    return res.status(400).json({ error: 'label must be a string or null' });
+  }
+  const label = typeof rawLabel === 'string' && rawLabel.trim() ? rawLabel.trim() : null;
+
+  const { rows } = await pool.query(
+    `update public.tracked_domains
+     set label = $1
+     where id = $2 and user_id = $3
+     returning id, domain, label, added_at`,
+    [label, req.params.id, req.user!.id]
+  );
+
+  if (rows.length === 0) {
+    return res.status(404).json({ error: 'Domain not found' });
+  }
+
+  res.json({ domain: rows[0] });
 }));
 
 domainsRouter.delete('/:id', asyncHandler(async (req, res) => {

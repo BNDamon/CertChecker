@@ -6,6 +6,7 @@ import { getDomainDetail, type CheckResult } from '@/lib/api';
 import { daysUntil, urgencyTone, formatCountdown } from '@/lib/expiry';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Pagination } from '@/components/Pagination';
+import { InlineLabel } from '@/components/InlineLabel';
 import { GlobeIcon, ShieldIcon } from '@/components/icons';
 
 const PAGE_SIZE = 10;
@@ -14,7 +15,12 @@ export default function DomainDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
-  const [domainInfo, setDomainInfo] = useState<{ id: string; domain: string; added_at: string } | null>(null);
+  const [domainInfo, setDomainInfo] = useState<{
+    id: string;
+    domain: string;
+    label: string | null;
+    added_at: string;
+  } | null>(null);
   // The most recent check, independent of which history page is showing --
   // the status cards up top should always reflect "now", not whatever page
   // of history the user happens to be looking at.
@@ -86,9 +92,19 @@ export default function DomainDetailPage() {
         </div>
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-white">{domainInfo?.domain}</h1>
-          <p className="text-xs text-slate-400">
-            Tracked since {domainInfo ? new Date(domainInfo.added_at).toLocaleDateString() : '…'}
-          </p>
+          <div className="flex items-center gap-2 text-xs text-slate-400">
+            <span>Tracked since {domainInfo ? new Date(domainInfo.added_at).toLocaleDateString() : '…'}</span>
+            {domainInfo && (
+              <>
+                <span>·</span>
+                <InlineLabel
+                  domainId={domainInfo.id}
+                  label={domainInfo.label}
+                  onSaved={(updated) => setDomainInfo((prev) => (prev ? { ...prev, ...updated } : prev))}
+                />
+              </>
+            )}
+          </div>
         </div>
       </div>
 

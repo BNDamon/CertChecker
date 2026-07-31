@@ -2,10 +2,11 @@
 
 import { useState, FormEvent } from 'react';
 import { addDomain } from '@/lib/api';
-import { GlobeIcon, PlusIcon } from './icons';
+import { GlobeIcon, PlusIcon, TagIcon } from './icons';
 
 export function AddDomainForm({ onAdded }: { onAdded: () => void }) {
   const [domain, setDomain] = useState('');
+  const [label, setLabel] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -14,8 +15,9 @@ export function AddDomainForm({ onAdded }: { onAdded: () => void }) {
     setError(null);
     setSubmitting(true);
     try {
-      await addDomain(domain);
+      await addDomain(domain, label.trim() || undefined);
       setDomain('');
+      setLabel('');
       onAdded();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add domain');
@@ -35,6 +37,16 @@ export function AddDomainForm({ onAdded }: { onAdded: () => void }) {
             placeholder="example.com"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
+            className="w-full rounded-lg border border-slate-700 bg-slate-950/60 py-2 pl-9 pr-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500/30"
+          />
+        </div>
+        <div className="relative sm:w-48">
+          <TagIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <input
+            type="text"
+            placeholder="Client (optional)"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
             className="w-full rounded-lg border border-slate-700 bg-slate-950/60 py-2 pl-9 pr-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500/30"
           />
         </div>

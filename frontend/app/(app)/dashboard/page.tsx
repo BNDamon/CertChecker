@@ -10,7 +10,7 @@ import { UsageBar } from '@/components/UsageBar';
 import { StatCard } from '@/components/StatCard';
 import { NextUpCard } from '@/components/NextUpCard';
 import { Pagination } from '@/components/Pagination';
-import { SparklesIcon, GlobeIcon, AlertTriangleIcon, XCircleIcon } from '@/components/icons';
+import { SparklesIcon, GlobeIcon, AlertTriangleIcon, XCircleIcon, SearchIcon } from '@/components/icons';
 
 const PAGE_SIZE = 10;
 
@@ -19,14 +19,30 @@ export default function DashboardPage() {
   const [domains, setDomains] = useState<TrackedDomain[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [stats, setStats] = useState<DomainStats | null>(null);
   const [loadingDomains, setLoadingDomains] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async (targetPage: number) => {
+  // Debounce so every keystroke doesn't fire a request -- 300ms feels
+  // instant while still collapsing a fast typist into one call.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const refresh = useCallback(async (targetPage: number, q: string) => {
     setLoadingDomains(true);
     try {
-      const [domainsRes, statsRes] = await Promise.all([listDomains(targetPage, PAGE_SIZE), getDomainStats()]);
+      const [domainsRes, statsRes] = await Promise.all([
+        listDomains(targetPage, PAGE_SIZE, q),
+        getDomainStats(),
+      ]);
       setDomains(domainsRes.domains);
       setTotal(domainsRes.total);
       setStats(statsRes);
@@ -39,8 +55,8 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    refresh(page);
-  }, [page, refresh]);
+    refresh(page, debouncedSearch);
+  }, [page, debouncedSearch, refresh]);
 
   // Urgency ordering is only meaningful within the current page -- the
   // "next up" card and stat counts (from getDomainStats) already cover the
@@ -58,14 +74,18 @@ export default function DashboardPage() {
 
   async function handleRemove(id: string) {
     await removeDomain(id);
-    refresh(page);
+    refresh(page, debouncedSearch);
     refreshMe();
   }
 
   async function handleAdded() {
     setPage(1);
-    await refresh(1);
+    await refresh(1, debouncedSearch);
     refreshMe();
+  }
+
+  function handleDomainUpdated(updated: { id: string; label: string | null }) {
+    setDomains((prev) => prev.map((d) => (d.id === updated.id ? { ...d, ...updated } : d)));
   }
 
   const isPro = me?.subscriptionStatus === 'active';
@@ -93,8 +113,19 @@ export default function DashboardPage() {
         <NextUpCard domain={stats.nextUp.domain} kind={stats.nextUp.kind} days={stats.nextUp.days} />
       )}
 
-      <div className="mb-6">
+      <div className="mb-4">
         <AddDomainForm onAdded={handleAdded} />
+      </div>
+
+      <div className="relative mb-4">
+        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by domain or client…"
+          className="w-full rounded-lg border border-slate-800 bg-slate-900/60 py-2 pl-9 pr-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500/30 sm:max-w-xs"
+        />
       </div>
 
       {error && (
@@ -107,7 +138,7 @@ export default function DashboardPage() {
         <p className="text-sm text-slate-400">Loading domains…</p>
       ) : (
         <>
-          <DomainList domains={sortedDomains} onRemove={handleRemove} />
+          <DomainList domains={sortedDomains} onRemove={handleRemove} onDomainUpdated={handleDomainUpdated} />
           {total > 0 && (
             <div className="mt-2 rounded-2xl border border-slate-800 bg-slate-900/60">
               <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />

@@ -6,6 +6,7 @@ import type { TrackedDomain } from '@/lib/api';
 import { daysUntil, urgencyTone, formatCountdown } from '@/lib/expiry';
 import { StatusBadge } from './StatusBadge';
 import { ConfirmDialog } from './ConfirmDialog';
+import { InlineLabel } from './InlineLabel';
 import { GlobeIcon, TrashIcon } from './icons';
 
 function sslLabel(domain: TrackedDomain, days: number | null) {
@@ -22,9 +23,11 @@ function domainLabel(domain: TrackedDomain, days: number | null) {
 export function DomainList({
   domains,
   onRemove,
+  onDomainUpdated,
 }: {
   domains: TrackedDomain[];
   onRemove: (id: string) => Promise<void>;
+  onDomainUpdated: (domain: { id: string; label: string | null }) => void;
 }) {
   const [pendingRemoval, setPendingRemoval] = useState<TrackedDomain | null>(null);
   const [removing, setRemoving] = useState(false);
@@ -77,10 +80,15 @@ export function DomainList({
                 key={d.id}
                 className="group grid grid-cols-[1fr,140px,140px,120px,40px] items-center gap-4 px-5 py-3.5 transition-colors hover:bg-slate-800/40"
               >
-                <Link href={`/domains/${d.id}`} className="flex items-center gap-2.5 truncate hover:underline">
-                  <GlobeIcon className="h-4 w-4 shrink-0 text-slate-500" />
-                  <span className="truncate text-sm font-medium text-slate-100">{d.domain}</span>
-                </Link>
+                <div className="min-w-0">
+                  <Link href={`/domains/${d.id}`} className="flex items-center gap-2.5 truncate hover:underline">
+                    <GlobeIcon className="h-4 w-4 shrink-0 text-slate-500" />
+                    <span className="truncate text-sm font-medium text-slate-100">{d.domain}</span>
+                  </Link>
+                  <div className="mt-0.5 pl-6">
+                    <InlineLabel domainId={d.id} label={d.label} onSaved={onDomainUpdated} />
+                  </div>
+                </div>
                 <div>
                   <StatusBadge tone={sslTone} label={sslLabel(d, sslDays)} />
                 </div>

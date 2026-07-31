@@ -124,3 +124,25 @@ export function BarChartIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function TagIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
+      <path
+        d="M11.6 3.5H6a2.5 2.5 0 0 0-2.5 2.5v5.6c0 .5.2 1 .56 1.36l8.5 8.5c.7.7 1.85.7 2.56 0l6.1-6.1a1.8 1.8 0 0 0 0-2.56l-8.5-8.5a1.9 1.9 0 0 0-1.06-.56z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8.5" r="1.4" />
+    </svg>
+  );
+}
+
+export function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="M20 20l-4.35-4.35" strokeLinecap="round" />
+    </svg>
+  );
+}
