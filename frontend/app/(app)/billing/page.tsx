@@ -34,7 +34,7 @@ export default function BillingPage() {
   const isPro = me.subscriptionStatus === 'active';
 
   return (
-    <>
+    <div className="mx-auto max-w-3xl">
       <h1 className="mb-6 text-xl font-semibold tracking-tight text-white">Billing</h1>
 
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
@@ -43,7 +43,7 @@ export default function BillingPage() {
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-lg ${
                 isPro
-                  ? 'bg-gradient-to-br from-accent-500/20 to-indigo-500/20 text-accent-300'
+                  ? 'bg-gradient-to-br from-accent-500/20 to-teal-500/20 text-accent-300'
                   : 'bg-slate-800 text-slate-300'
               }`}
             >
@@ -87,6 +87,6 @@ export default function BillingPage() {
           <UpgradeButton />
         )}
       </div>
-    </>
+    </div>
   );
 }

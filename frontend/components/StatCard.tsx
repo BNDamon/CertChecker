@@ -11,7 +11,7 @@ const TONE_ICON_WRAP: Record<NonNullable<StatCardProps['tone']>, string> = {
   default: 'bg-slate-800 text-slate-300',
   warning: 'bg-amber-500/10 text-amber-400',
   danger: 'bg-red-500/10 text-red-400',
-  accent: 'bg-gradient-to-br from-accent-500/20 to-indigo-500/20 text-accent-300',
+  accent: 'bg-gradient-to-br from-accent-500/20 to-teal-500/20 text-accent-300',
 };
 
 export function StatCard({ label, value, icon: Icon, tone = 'default' }: StatCardProps) {

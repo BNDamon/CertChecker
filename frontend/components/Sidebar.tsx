@@ -27,7 +27,7 @@ export function Sidebar({
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col self-start overflow-y-auto border-r border-slate-800 bg-slate-950/60 px-4 py-5">
       <div className="mb-8 flex items-center gap-2 px-1">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent-500 to-indigo-600 text-white">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent-500 to-teal-600 text-white">
           <ShieldIcon className="h-4 w-4" />
         </div>
         <span className="text-sm font-semibold tracking-tight text-white">CertChecker</span>

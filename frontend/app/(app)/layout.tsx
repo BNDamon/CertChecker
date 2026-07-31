@@ -38,9 +38,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <Sidebar email={session.user.email ?? ''} isPro={me?.subscriptionStatus === 'active'} onSignOut={handleSignOut} />
-      <main className="flex-1 px-8 py-8">
-        <div className="mx-auto max-w-4xl">{children}</div>
-      </main>
+      <main className="flex-1 px-8 py-8">{children}</main>
     </div>
   );
 }

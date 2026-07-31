@@ -35,7 +35,7 @@ export default function SupportPage() {
     <div className="min-h-screen">
       <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-6">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent-500 to-indigo-600 text-white">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent-500 to-teal-600 text-white">
             <ShieldIcon className="h-4 w-4" />
           </div>
           <span className="text-sm font-semibold tracking-tight text-white">CertChecker</span>
@@ -68,7 +68,7 @@ export default function SupportPage() {
           <p className="mb-4 text-sm text-slate-400">Send us an email and we&apos;ll get back to you.</p>
           <a
             href={`mailto:${SUPPORT_EMAIL}`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-accent-500 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-md shadow-accent-600/20 transition-opacity hover:opacity-90"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-accent-500 to-teal-600 px-4 py-2 text-sm font-medium text-white shadow-md shadow-accent-600/20 transition-opacity hover:opacity-90"
           >
             {SUPPORT_EMAIL}
           </a>

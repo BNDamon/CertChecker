@@ -22,7 +22,7 @@ export function UpgradeButton() {
     <button
       onClick={handleClick}
       disabled={loading}
-      className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-accent-500 to-indigo-600 px-3.5 py-2 text-sm font-medium text-white shadow-md shadow-accent-600/20 transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-accent-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-accent-500 to-teal-600 px-3.5 py-2 text-sm font-medium text-white shadow-md shadow-accent-600/20 transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-accent-500/40 disabled:cursor-not-allowed disabled:opacity-50"
     >
       <SparklesIcon className="h-4 w-4" />
       {loading ? 'Redirecting…' : 'Upgrade to Pro'}

@@ -10,6 +10,7 @@ import { UsageBar } from '@/components/UsageBar';
 import { StatCard } from '@/components/StatCard';
 import { NextUpCard } from '@/components/NextUpCard';
 import { Pagination } from '@/components/Pagination';
+import { RecentAlertsPanel } from '@/components/RecentAlertsPanel';
 import { SparklesIcon, GlobeIcon, AlertTriangleIcon, XCircleIcon, SearchIcon } from '@/components/icons';
 
 const PAGE_SIZE = 10;
@@ -91,7 +92,8 @@ export default function DashboardPage() {
   const isPro = me?.subscriptionStatus === 'active';
 
   return (
-    <>
+    <div className="flex gap-6">
+    <div className="min-w-0 flex-1">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight text-white">Tracked domains</h1>
         {me && !isPro && <UsageBar count={me.domainCount} limit={me.freeTierDomainLimit} />}
@@ -146,6 +148,8 @@ export default function DashboardPage() {
           )}
         </>
       )}
-    </>
+    </div>
+    <RecentAlertsPanel />
+    </div>
   );
 }

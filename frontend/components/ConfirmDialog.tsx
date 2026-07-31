@@ -53,7 +53,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             disabled={submitting}
             className={`rounded-lg px-3.5 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 ${
-              danger ? 'bg-red-600' : 'bg-gradient-to-r from-accent-500 to-indigo-600'
+              danger ? 'bg-red-600' : 'bg-gradient-to-r from-accent-500 to-teal-600'
             }`}
           >
             {submitting ? 'Please wait…' : confirmLabel}

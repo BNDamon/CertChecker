@@ -32,7 +32,7 @@ export default function LandingPage() {
     <div className="min-h-screen">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-6">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent-500 to-indigo-600 text-white">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent-500 to-teal-600 text-white">
             <ShieldIcon className="h-4 w-4" />
           </div>
           <span className="text-sm font-semibold tracking-tight text-white">CertChecker</span>
@@ -63,7 +63,7 @@ export default function LandingPage() {
           <div className="mt-8 flex items-center gap-3">
             <Link
               href="/login?mode=sign-up"
-              className="rounded-lg bg-gradient-to-r from-accent-500 to-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-accent-600/20 transition-opacity hover:opacity-90"
+              className="rounded-lg bg-gradient-to-r from-accent-500 to-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-accent-600/20 transition-opacity hover:opacity-90"
             >
               Get started free
             </Link>

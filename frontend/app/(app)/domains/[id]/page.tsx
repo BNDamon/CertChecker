@@ -63,7 +63,7 @@ export default function DomainDetailPage() {
 
   if (error || (!loading && !domainInfo)) {
     return (
-      <div>
+      <div className="mx-auto max-w-3xl">
         <p className="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400 ring-1 ring-inset ring-red-500/20">
           {error ?? 'Domain not found'}
         </p>
@@ -78,7 +78,7 @@ export default function DomainDetailPage() {
   const domainDays = latestCheck ? daysUntil(latestCheck.domain_expiry_date) : null;
 
   return (
-    <>
+    <div className="mx-auto max-w-3xl">
       <button
         onClick={() => router.push('/dashboard')}
         className="mb-4 text-sm text-slate-400 transition-colors hover:text-slate-200"
@@ -202,6 +202,6 @@ export default function DomainDetailPage() {
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
         </div>
       )}
-    </>
+    </div>
   );
 }

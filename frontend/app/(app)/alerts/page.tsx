@@ -34,7 +34,7 @@ export default function AlertsPage() {
   }, [page, refresh]);
 
   return (
-    <>
+    <div className="mx-auto max-w-3xl">
       <h1 className="mb-1 text-xl font-semibold tracking-tight text-white">Alerts</h1>
       <p className="mb-6 text-sm text-slate-400">Every expiry email that&apos;s been sent to you.</p>
 
@@ -88,6 +88,6 @@ export default function AlertsPage() {
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
         </div>
       )}
-    </>
+    </div>
   );
 }
