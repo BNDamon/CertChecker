@@ -4,13 +4,17 @@ import { env } from '../config/env';
 import { checkSslExpiry } from '../services/sslCheck';
 import { checkDomainExpiry } from '../services/whoisCheck';
 import { sendExpiryAlert } from '../services/email';
-import { daysRemaining, unsentCrossedThresholds } from '../services/thresholds';
+import { sendWebhookAlert } from '../services/webhook';
+import { daysRemaining, unsentCrossedThresholds, DEFAULT_ALERT_THRESHOLDS_DAYS } from '../services/thresholds';
 
 interface TrackedDomainRow {
   id: string;
   domain: string;
   user_id: string;
   email: string;
+  subscription_status: string;
+  webhook_url: string | null;
+  alert_thresholds: number[] | null;
 }
 
 async function getAlreadySentThresholds(domainId: string, alertType: 'ssl' | 'domain'): Promise<Set<number>> {
@@ -37,9 +41,17 @@ async function maybeAlert(
 ) {
   if (!expiryDate) return;
 
+  // Custom thresholds are a Pro perk -- free-tier users (or Pro users who
+  // haven't set any) fall back to the default 30/14/7/1 schedule.
+  const isPro = domain.subscription_status === 'active';
+  const thresholds =
+    isPro && domain.alert_thresholds && domain.alert_thresholds.length > 0
+      ? domain.alert_thresholds
+      : DEFAULT_ALERT_THRESHOLDS_DAYS;
+
   const days = daysRemaining(expiryDate);
   const alreadySent = await getAlreadySentThresholds(domain.id, alertType);
-  const toSend = unsentCrossedThresholds(days, alreadySent);
+  const toSend = unsentCrossedThresholds(days, alreadySent, thresholds);
 
   for (const thresholdDays of toSend) {
     await sendExpiryAlert({
@@ -50,6 +62,24 @@ async function maybeAlert(
       daysRemaining: days,
       thresholdDays,
     });
+
+    if (isPro && domain.webhook_url) {
+      try {
+        await sendWebhookAlert({
+          url: domain.webhook_url,
+          domain: domain.domain,
+          kind: alertType,
+          expiryDate,
+          daysRemaining: days,
+          thresholdDays,
+        });
+      } catch (err) {
+        // A broken webhook shouldn't stop the email alert (already sent
+        // above) from being recorded -- log and move on.
+        console.error(`[dailyCheck] webhook failed for ${domain.domain}:`, err);
+      }
+    }
+
     await recordAlertSent(domain.id, alertType, thresholdDays);
   }
 }
@@ -75,7 +105,7 @@ export async function runDailyCheck(): Promise<void> {
   console.log(`[dailyCheck] starting run at ${new Date().toISOString()}`);
 
   const { rows } = await pool.query<TrackedDomainRow>(
-    `select d.id, d.domain, d.user_id, u.email
+    `select d.id, d.domain, d.user_id, u.email, u.subscription_status, u.webhook_url, u.alert_thresholds
      from public.tracked_domains d
      join public.users u on u.id = d.user_id`
   );

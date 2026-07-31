@@ -165,7 +165,7 @@ domainsRouter.get('/stats', asyncHandler(async (req, res) => {
 
 domainsRouter.get('/:id', asyncHandler(async (req, res) => {
   const { rows: domainRows } = await pool.query(
-    `select id, domain, label, added_at from public.tracked_domains where id = $1 and user_id = $2`,
+    `select id, domain, label, added_at, share_token from public.tracked_domains where id = $1 and user_id = $2`,
     [req.params.id, req.user!.id]
   );
 
@@ -212,6 +212,37 @@ domainsRouter.patch('/:id', asyncHandler(async (req, res) => {
   }
 
   res.json({ domain: rows[0] });
+}));
+
+domainsRouter.patch('/:id/share', asyncHandler(async (req, res) => {
+  const { rows: userRows } = await pool.query(
+    `select subscription_status from public.users where id = $1`,
+    [req.user!.id]
+  );
+  if ((userRows[0]?.subscription_status ?? 'free') !== 'active') {
+    return res.status(403).json({ error: 'Public status pages are a Pro feature' });
+  }
+
+  const enabled = req.body?.enabled === true;
+
+  const { rows } = await pool.query(
+    enabled
+      ? `update public.tracked_domains
+         set share_token = coalesce(share_token, gen_random_uuid())
+         where id = $1 and user_id = $2
+         returning share_token`
+      : `update public.tracked_domains
+         set share_token = null
+         where id = $1 and user_id = $2
+         returning share_token`,
+    [req.params.id, req.user!.id]
+  );
+
+  if (rows.length === 0) {
+    return res.status(404).json({ error: 'Domain not found' });
+  }
+
+  res.json({ shareToken: rows[0].share_token });
 }));
 
 domainsRouter.delete('/:id', asyncHandler(async (req, res) => {

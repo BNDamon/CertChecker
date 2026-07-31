@@ -1,11 +1,17 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
+import Link from 'next/link';
 import { useSession } from '@/lib/useSession';
+import { useMe } from '@/lib/useMe';
 import { supabase } from '@/lib/supabaseClient';
+import { ThresholdsEditor } from '@/components/ThresholdsEditor';
+import { WebhookSettings } from '@/components/WebhookSettings';
 
 export default function SettingsPage() {
   const { session } = useSession();
+  const { me, refresh: refreshMe } = useMe();
+  const isPro = me?.subscriptionStatus === 'active';
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +107,38 @@ export default function SettingsPage() {
               {submitting ? 'Updating…' : 'Update password'}
             </button>
           </form>
+        </section>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+          <h2 className="mb-1 text-sm font-semibold text-white">Alert thresholds</h2>
+          <p className="mb-4 text-sm text-slate-400">
+            Customize how many days before expiry you get notified. Free plan uses the default 30/14/7/1 schedule.
+          </p>
+          {isPro ? (
+            <ThresholdsEditor thresholds={me?.alertThresholds ?? null} onSaved={() => refreshMe()} />
+          ) : (
+            <p className="text-sm text-slate-400">
+              <Link href="/billing" className="text-accent-400 hover:text-accent-300">
+                Upgrade to Pro
+              </Link>{' '}
+              to set your own alert schedule.
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+          <h2 className="mb-1 text-sm font-semibold text-white">Slack / webhook alerts</h2>
+          <p className="mb-4 text-sm text-slate-400">Get expiry alerts posted to Slack or any webhook endpoint.</p>
+          {isPro ? (
+            <WebhookSettings webhookUrl={me?.webhookUrl ?? null} onSaved={() => refreshMe()} />
+          ) : (
+            <p className="text-sm text-slate-400">
+              <Link href="/billing" className="text-accent-400 hover:text-accent-300">
+                Upgrade to Pro
+              </Link>{' '}
+              to connect Slack or a custom webhook.
+            </p>
+          )}
         </section>
       </div>
     </div>

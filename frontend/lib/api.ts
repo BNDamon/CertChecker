@@ -99,7 +99,7 @@ export interface CheckResult {
 }
 
 export interface DomainDetail {
-  domain: { id: string; domain: string; label: string | null; added_at: string };
+  domain: { id: string; domain: string; label: string | null; added_at: string; share_token: string | null };
   history: CheckResult[];
 }
 
@@ -143,6 +143,8 @@ export interface MeInfo {
   subscriptionStatus: 'free' | 'active' | 'past_due' | 'canceled';
   domainCount: number;
   freeTierDomainLimit: number;
+  webhookUrl: string | null;
+  alertThresholds: number[] | null;
 }
 
 export function getMe(): Promise<MeInfo> {
@@ -151,4 +153,41 @@ export function getMe(): Promise<MeInfo> {
 
 export function createPortalSession(): Promise<{ url: string }> {
   return authedFetch('/api/stripe/create-portal-session', { method: 'POST' });
+}
+
+export function updateThresholds(thresholds: number[] | null): Promise<{ alertThresholds: number[] | null }> {
+  return authedFetch('/api/me/thresholds', { method: 'PATCH', body: JSON.stringify({ thresholds }) });
+}
+
+export function updateWebhook(webhookUrl: string | null): Promise<{ webhookUrl: string | null }> {
+  return authedFetch('/api/me/webhook', { method: 'PATCH', body: JSON.stringify({ webhookUrl }) });
+}
+
+export function testWebhook(): Promise<{ ok: true }> {
+  return authedFetch('/api/me/webhook/test', { method: 'POST' });
+}
+
+export function toggleDomainShare(id: string, enabled: boolean): Promise<{ shareToken: string | null }> {
+  return authedFetch(`/api/domains/${id}/share`, { method: 'PATCH', body: JSON.stringify({ enabled }) });
+}
+
+export interface PublicDomainStatus {
+  domain: string;
+  label: string | null;
+  checked_at: string | null;
+  ssl_expiry_date: string | null;
+  domain_expiry_date: string | null;
+  ssl_status: 'ok' | 'expired' | 'error' | null;
+  domain_status: 'ok' | 'expired' | 'error' | 'unknown' | null;
+}
+
+// Not behind auth -- this is the public status page anyone with the link can
+// view, so it calls the backend directly rather than through authedFetch.
+export async function getPublicStatus(token: string): Promise<{ status: PublicDomainStatus }> {
+  const res = await fetch(`${API_URL}/api/public/status/${token}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Status page not found');
+  }
+  return res.json();
 }

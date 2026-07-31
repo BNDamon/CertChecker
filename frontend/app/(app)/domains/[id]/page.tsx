@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getDomainDetail, type CheckResult } from '@/lib/api';
+import { useMe } from '@/lib/useMe';
 import { daysUntil, urgencyTone, formatCountdown } from '@/lib/expiry';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Pagination } from '@/components/Pagination';
 import { InlineLabel } from '@/components/InlineLabel';
+import { SharePanel } from '@/components/SharePanel';
 import { GlobeIcon, ShieldIcon } from '@/components/icons';
 
 const PAGE_SIZE = 10;
@@ -15,11 +17,14 @@ export default function DomainDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
+  const { me } = useMe();
+
   const [domainInfo, setDomainInfo] = useState<{
     id: string;
     domain: string;
     label: string | null;
     added_at: string;
+    share_token: string | null;
   } | null>(null);
   // The most recent check, independent of which history page is showing --
   // the status cards up top should always reflect "now", not whatever page
@@ -163,6 +168,15 @@ export default function DomainDetailPage() {
           )}
         </div>
       </div>
+
+      {domainInfo && (
+        <SharePanel
+          domainId={domainInfo.id}
+          shareToken={domainInfo.share_token}
+          isPro={me?.subscriptionStatus === 'active'}
+          onChange={(token) => setDomainInfo((prev) => (prev ? { ...prev, share_token: token } : prev))}
+        />
+      )}
 
       <h2 className="mb-3 text-sm font-semibold text-white">Check history</h2>
       {!loading && history.length === 0 ? (

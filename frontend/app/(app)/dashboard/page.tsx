@@ -11,7 +11,8 @@ import { StatCard } from '@/components/StatCard';
 import { NextUpCard } from '@/components/NextUpCard';
 import { Pagination } from '@/components/Pagination';
 import { RecentAlertsPanel } from '@/components/RecentAlertsPanel';
-import { SparklesIcon, GlobeIcon, AlertTriangleIcon, XCircleIcon, SearchIcon } from '@/components/icons';
+import { domainsToCsv, downloadCsv } from '@/lib/csv';
+import { SparklesIcon, GlobeIcon, AlertTriangleIcon, XCircleIcon, SearchIcon, DownloadIcon } from '@/components/icons';
 
 const PAGE_SIZE = 10;
 
@@ -25,6 +26,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DomainStats | null>(null);
   const [loadingDomains, setLoadingDomains] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   // Debounce so every keystroke doesn't fire a request -- 300ms feels
   // instant while still collapsing a fast typist into one call.
@@ -89,6 +91,26 @@ export default function DashboardPage() {
     setDomains((prev) => prev.map((d) => (d.id === updated.id ? { ...d, ...updated } : d)));
   }
 
+  async function handleExportCsv() {
+    setExporting(true);
+    try {
+      const all: TrackedDomain[] = [];
+      let p = 1;
+      const exportPageSize = 200;
+      // Export needs every domain regardless of what's currently paginated
+      // on screen, so page through the full list rather than reusing `domains`.
+      for (;;) {
+        const res = await listDomains(p, exportPageSize, debouncedSearch);
+        all.push(...res.domains);
+        if (res.domains.length < exportPageSize) break;
+        p++;
+      }
+      downloadCsv(`certchecker-domains-${new Date().toISOString().slice(0, 10)}.csv`, domainsToCsv(all));
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const isPro = me?.subscriptionStatus === 'active';
 
   return (
@@ -96,7 +118,19 @@ export default function DashboardPage() {
     <div className="min-w-0 flex-1">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight text-white">Tracked domains</h1>
-        {me && !isPro && <UsageBar count={me.domainCount} limit={me.freeTierDomainLimit} />}
+        <div className="flex items-center gap-3">
+          {me && !isPro && <UsageBar count={me.domainCount} limit={me.freeTierDomainLimit} />}
+          {isPro && (
+            <button
+              onClick={handleExportCsv}
+              disabled={exporting}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <DownloadIcon className="h-3.5 w-3.5" />
+              {exporting ? 'Exporting…' : 'Export CSV'}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
