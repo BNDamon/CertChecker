@@ -8,7 +8,15 @@ import { asyncHandler } from '../middleware/asyncHandler';
 // current check status, never the owning user_id or internal domain id.
 export const publicStatusRouter = Router();
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 publicStatusRouter.get('/:token', asyncHandler(async (req, res) => {
+  // share_token is a uuid column -- a malformed token would otherwise reach
+  // Postgres as an invalid uuid literal and surface as a 500, not a 404.
+  if (!UUID_RE.test(req.params.token)) {
+    return res.status(404).json({ error: 'Status page not found' });
+  }
+
   const { rows } = await pool.query(
     `select
        d.domain,
