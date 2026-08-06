@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useState, FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { ShieldIcon } from '@/components/icons';
@@ -173,6 +174,20 @@ function LoginForm() {
                     ? 'Create account'
                     : 'Send reset link'}
             </button>
+
+            {mode === 'sign-up' && (
+              <p className="text-center text-xs text-slate-500">
+                By creating an account, you agree to our{' '}
+                <Link href="/terms" className="text-accent-400 hover:text-accent-300">
+                  Terms
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="text-accent-400 hover:text-accent-300">
+                  Privacy Policy
+                </Link>
+                .
+              </p>
+            )}
 
             {mode === 'forgot' && (
               <button

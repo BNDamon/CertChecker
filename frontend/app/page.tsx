@@ -125,9 +125,17 @@ export default function LandingPage() {
 
       <footer className="mx-auto flex max-w-5xl items-center justify-between px-4 py-8 text-xs text-slate-500">
         <span>&copy; {new Date().getFullYear()} CertChecker</span>
-        <Link href="/support" className="hover:text-slate-300">
-          Support
-        </Link>
+        <div className="flex items-center gap-5">
+          <Link href="/support" className="hover:text-slate-300">
+            Support
+          </Link>
+          <Link href="/terms" className="hover:text-slate-300">
+            Terms
+          </Link>
+          <Link href="/privacy" className="hover:text-slate-300">
+            Privacy
+          </Link>
+        </div>
       </footer>
     </div>
   );

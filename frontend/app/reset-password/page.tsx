@@ -1,24 +1,65 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState, FormEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { ShieldIcon } from '@/components/icons';
 
-// Reached via the link in a Supabase password-reset email, which carries a
-// one-time recovery token in the URL fragment. The Supabase client picks
-// that up automatically on load and turns it into a real (short-lived)
-// session, which is what makes updateUser({ password }) below work here
-// without the user needing to already be signed in.
+// Reached via the link in a Supabase password-reset email. Modern Supabase
+// projects use the PKCE flow for this, which redirects here with a `?code=`
+// param that must be explicitly exchanged for a session via
+// exchangeCodeForSession -- the client's automatic hash-fragment detection
+// (the older implicit flow) never fires for this, so without the exchange
+// below, updateUser() fails with "Auth session missing".
 export const dynamic = 'force-dynamic';
 
+// useSearchParams requires a Suspense boundary even on a force-dynamic page.
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordForm />
+    </Suspense>
+  );
+}
+
+function ResetPasswordForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [ready, setReady] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const code = searchParams.get('code');
+
+    (async () => {
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          setLinkError('This reset link is invalid or has expired -- request a new one from the sign-in page.');
+          return;
+        }
+        setReady(true);
+        return;
+      }
+
+      // Fall back to checking for an already-established session, in case
+      // the older hash-fragment flow (#access_token=...&type=recovery) is
+      // what this project is configured for instead.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        setReady(true);
+      } else {
+        setLinkError('This reset link is invalid or has expired -- request a new one from the sign-in page.');
+      }
+    })();
+  }, [searchParams]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -57,10 +98,16 @@ export default function ResetPasswordPage() {
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl shadow-black/40 backdrop-blur">
-          {success ? (
+          {linkError ? (
+            <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400 ring-1 ring-inset ring-red-500/20">
+              {linkError}
+            </p>
+          ) : success ? (
             <p className="rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-400 ring-1 ring-inset ring-green-500/20">
               Password updated -- redirecting…
             </p>
+          ) : !ready ? (
+            <p className="text-sm text-slate-400">Verifying your reset link…</p>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
