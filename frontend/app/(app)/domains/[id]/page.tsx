@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getDomainDetail, type CheckResult } from '@/lib/api';
+import { getDomainDetail, checkDomainNow, type CheckResult } from '@/lib/api';
 import { useMe } from '@/lib/useMe';
 import { daysUntil, urgencyTone, formatCountdown } from '@/lib/expiry';
+import { buildIcs, downloadIcs } from '@/lib/ics';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Pagination } from '@/components/Pagination';
 import { InlineLabel } from '@/components/InlineLabel';
 import { SharePanel } from '@/components/SharePanel';
-import { GlobeIcon, ShieldIcon } from '@/components/icons';
+import { GlobeIcon, ShieldIcon, RefreshIcon, CalendarIcon } from '@/components/icons';
 
 const PAGE_SIZE = 10;
 
@@ -36,8 +37,10 @@ export default function DomainDetailPage() {
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refreshLatest = useCallback(() => {
     getDomainDetail(params.id, 1, 1)
       .then((res) => {
         setDomainInfo(res.domain);
@@ -45,6 +48,48 @@ export default function DomainDetailPage() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load domain'));
   }, [params.id]);
+
+  useEffect(() => {
+    refreshLatest();
+  }, [refreshLatest]);
+
+  async function handleCheckNow() {
+    setChecking(true);
+    setCheckError(null);
+    try {
+      await checkDomainNow(params.id);
+      refreshLatest();
+      setPage(1);
+      refreshHistory(1);
+    } catch (err) {
+      setCheckError(err instanceof Error ? err.message : 'Check failed');
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  function handleAddToCalendar() {
+    if (!domainInfo || !latestCheck) return;
+    const events = [];
+    if (latestCheck.ssl_expiry_date) {
+      events.push({
+        uid: `${domainInfo.id}-ssl@certchecker`,
+        title: `${domainInfo.domain} -- SSL certificate expires`,
+        description: `SSL certificate for ${domainInfo.domain} expires on this date.`,
+        date: new Date(latestCheck.ssl_expiry_date),
+      });
+    }
+    if (latestCheck.domain_expiry_date) {
+      events.push({
+        uid: `${domainInfo.id}-domain@certchecker`,
+        title: `${domainInfo.domain} -- domain registration expires`,
+        description: `Domain registration for ${domainInfo.domain} expires on this date.`,
+        date: new Date(latestCheck.domain_expiry_date),
+      });
+    }
+    if (events.length === 0) return;
+    downloadIcs(`${domainInfo.domain}-expiry.ics`, buildIcs(events));
+  }
 
   const refreshHistory = useCallback(
     async (targetPage: number) => {
@@ -91,27 +136,55 @@ export default function DomainDetailPage() {
         ← Back to domains
       </button>
 
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-800 text-slate-300">
-          <GlobeIcon className="h-5 w-5" />
-        </div>
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-white">{domainInfo?.domain}</h1>
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <span>Tracked since {domainInfo ? new Date(domainInfo.added_at).toLocaleDateString() : '…'}</span>
-            {domainInfo && (
-              <>
-                <span>·</span>
-                <InlineLabel
-                  domainId={domainInfo.id}
-                  label={domainInfo.label}
-                  onSaved={(updated) => setDomainInfo((prev) => (prev ? { ...prev, ...updated } : prev))}
-                />
-              </>
-            )}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-800 text-slate-300">
+            <GlobeIcon className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-white">{domainInfo?.domain}</h1>
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <span>Tracked since {domainInfo ? new Date(domainInfo.added_at).toLocaleDateString() : '…'}</span>
+              {domainInfo && (
+                <>
+                  <span>·</span>
+                  <InlineLabel
+                    domainId={domainInfo.id}
+                    label={domainInfo.label}
+                    onSaved={(updated) => setDomainInfo((prev) => (prev ? { ...prev, ...updated } : prev))}
+                  />
+                </>
+              )}
+            </div>
           </div>
         </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCheckNow}
+            disabled={checking}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshIcon className={`h-3.5 w-3.5 ${checking ? 'animate-spin' : ''}`} />
+            {checking ? 'Checking…' : 'Check now'}
+          </button>
+          {latestCheck && (latestCheck.ssl_expiry_date || latestCheck.domain_expiry_date) && (
+            <button
+              onClick={handleAddToCalendar}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-800"
+            >
+              <CalendarIcon className="h-3.5 w-3.5" />
+              Add to calendar
+            </button>
+          )}
+        </div>
       </div>
+
+      {checkError && (
+        <p className="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400 ring-1 ring-inset ring-red-500/20">
+          {checkError}
+        </p>
+      )}
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">

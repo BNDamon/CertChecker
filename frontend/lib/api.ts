@@ -90,6 +90,19 @@ export function removeDomain(id: string): Promise<null> {
   return authedFetch(`/api/domains/${id}`, { method: 'DELETE' });
 }
 
+export function checkDomainNow(id: string): Promise<{ ok: true }> {
+  return authedFetch(`/api/domains/${id}/check`, { method: 'POST' });
+}
+
+export interface BulkAddResult {
+  added: string[];
+  skipped: { domain: string; reason: string }[];
+}
+
+export function bulkAddDomains(domains: string[]): Promise<BulkAddResult> {
+  return authedFetch('/api/domains/bulk', { method: 'POST', body: JSON.stringify({ domains }) });
+}
+
 export interface CheckResult {
   checked_at: string;
   ssl_expiry_date: string | null;
@@ -145,6 +158,9 @@ export interface MeInfo {
   freeTierDomainLimit: number;
   webhookUrl: string | null;
   alertThresholds: number[] | null;
+  alertRecipients: string[] | null;
+  brandName: string | null;
+  apiKey: string | null;
 }
 
 export function getMe(): Promise<MeInfo> {
@@ -179,6 +195,23 @@ export interface PublicDomainStatus {
   domain_expiry_date: string | null;
   ssl_status: 'ok' | 'expired' | 'error' | null;
   domain_status: 'ok' | 'expired' | 'error' | 'unknown' | null;
+  brand_name: string | null;
+}
+
+export function updateAlertRecipients(recipients: string[] | null): Promise<{ alertRecipients: string[] | null }> {
+  return authedFetch('/api/me/recipients', { method: 'PATCH', body: JSON.stringify({ recipients }) });
+}
+
+export function updateBrandName(brandName: string | null): Promise<{ brandName: string | null }> {
+  return authedFetch('/api/me/brand', { method: 'PATCH', body: JSON.stringify({ brandName }) });
+}
+
+export function generateApiKey(): Promise<{ apiKey: string }> {
+  return authedFetch('/api/me/api-key', { method: 'POST' });
+}
+
+export function revokeApiKey(): Promise<{ apiKey: null }> {
+  return authedFetch('/api/me/api-key', { method: 'DELETE' });
 }
 
 // Not behind auth -- this is the public status page anyone with the link can

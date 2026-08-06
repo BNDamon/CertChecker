@@ -5,6 +5,7 @@ import { domainsRouter } from './routes/domains';
 import { meRouter } from './routes/me';
 import { alertsRouter } from './routes/alerts';
 import { publicStatusRouter } from './routes/publicStatus';
+import { v1Router } from './routes/v1';
 import { stripeRouter, stripeWebhookHandler } from './routes/stripe';
 import { scheduleDailyCheck } from './jobs/dailyCheck';
 import { asyncHandler } from './middleware/asyncHandler';
@@ -26,6 +27,7 @@ app.use('/api/domains', domainsRouter);
 app.use('/api/me', meRouter);
 app.use('/api/alerts', alertsRouter);
 app.use('/api/public/status', publicStatusRouter);
+app.use('/api/v1', v1Router);
 app.use('/api/stripe', stripeRouter);
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

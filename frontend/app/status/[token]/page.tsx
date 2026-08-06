@@ -85,7 +85,7 @@ export default function PublicStatusPage() {
 
         <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-slate-500">
           <ShieldIcon className="h-3.5 w-3.5" />
-          Monitored by CertChecker
+          Monitored by {status.brand_name || 'CertChecker'}
         </div>
       </div>
     </main>

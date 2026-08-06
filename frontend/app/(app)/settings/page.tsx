@@ -7,6 +7,9 @@ import { useMe } from '@/lib/useMe';
 import { supabase } from '@/lib/supabaseClient';
 import { ThresholdsEditor } from '@/components/ThresholdsEditor';
 import { WebhookSettings } from '@/components/WebhookSettings';
+import { AlertRecipientsEditor } from '@/components/AlertRecipientsEditor';
+import { BrandNameEditor } from '@/components/BrandNameEditor';
+import { ApiKeyManager } from '@/components/ApiKeyManager';
 
 export default function SettingsPage() {
   const { session } = useSession();
@@ -137,6 +140,55 @@ export default function SettingsPage() {
                 Upgrade to Pro
               </Link>{' '}
               to connect Slack or a custom webhook.
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+          <h2 className="mb-1 text-sm font-semibold text-white">Alert recipients</h2>
+          <p className="mb-4 text-sm text-slate-400">Send expiry alerts to teammates in addition to yourself.</p>
+          {isPro ? (
+            <AlertRecipientsEditor recipients={me?.alertRecipients ?? null} onSaved={() => refreshMe()} />
+          ) : (
+            <p className="text-sm text-slate-400">
+              <Link href="/billing" className="text-accent-400 hover:text-accent-300">
+                Upgrade to Pro
+              </Link>{' '}
+              to add more alert recipients.
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+          <h2 className="mb-1 text-sm font-semibold text-white">White-label status pages</h2>
+          <p className="mb-4 text-sm text-slate-400">
+            Show your own brand on public status pages instead of CertChecker&apos;s.
+          </p>
+          {isPro ? (
+            <BrandNameEditor brandName={me?.brandName ?? null} onSaved={() => refreshMe()} />
+          ) : (
+            <p className="text-sm text-slate-400">
+              <Link href="/billing" className="text-accent-400 hover:text-accent-300">
+                Upgrade to Pro
+              </Link>{' '}
+              to white-label your status pages.
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+          <h2 className="mb-1 text-sm font-semibold text-white">API access</h2>
+          <p className="mb-4 text-sm text-slate-400">
+            A personal API key for pulling your domain status into your own tooling.
+          </p>
+          {isPro ? (
+            <ApiKeyManager apiKey={me?.apiKey ?? null} onChange={() => refreshMe()} />
+          ) : (
+            <p className="text-sm text-slate-400">
+              <Link href="/billing" className="text-accent-400 hover:text-accent-300">
+                Upgrade to Pro
+              </Link>{' '}
+              for API access.
             </p>
           )}
         </section>

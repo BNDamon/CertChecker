@@ -6,6 +6,7 @@ import { useMe } from '@/lib/useMe';
 import { daysUntil, mostUrgentDays } from '@/lib/expiry';
 import { DomainList } from '@/components/DomainList';
 import { AddDomainForm } from '@/components/AddDomainForm';
+import { BulkImportForm } from '@/components/BulkImportForm';
 import { UsageBar } from '@/components/UsageBar';
 import { StatCard } from '@/components/StatCard';
 import { NextUpCard } from '@/components/NextUpCard';
@@ -152,6 +153,8 @@ export default function DashboardPage() {
       <div className="mb-4">
         <AddDomainForm onAdded={handleAdded} />
       </div>
+
+      <BulkImportForm onAdded={handleAdded} />
 
       <div className="relative mb-4">
         <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />

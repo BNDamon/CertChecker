@@ -25,8 +25,13 @@ publicStatusRouter.get('/:token', asyncHandler(async (req, res) => {
        cr.ssl_expiry_date,
        cr.domain_expiry_date,
        cr.ssl_status,
-       cr.domain_status
+       cr.domain_status,
+       -- White-label branding is a Pro perk -- if the owner has since
+       -- downgraded, fall back to the default "Powered by CertChecker"
+       -- rather than keep a stale custom brand name showing.
+       case when u.subscription_status = 'active' then u.brand_name else null end as brand_name
      from public.tracked_domains d
+     join public.users u on u.id = d.user_id
      left join lateral (
        select * from public.check_results c
        where c.domain_id = d.id

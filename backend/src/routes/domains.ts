@@ -4,6 +4,9 @@ import { requireAuth } from '../middleware/auth';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { env } from '../config/env';
 import { parsePagination } from '../utils/pagination';
+import { checkOneDomain, type TrackedDomainRow } from '../services/checkDomain';
+
+const CHECK_NOW_COOLDOWN_MS = 5 * 60 * 1000;
 
 export const domainsRouter = Router();
 domainsRouter.use(requireAuth);
@@ -97,6 +100,55 @@ domainsRouter.post('/', asyncHandler(async (req, res) => {
     }
     throw err;
   }
+}));
+
+domainsRouter.post('/bulk', asyncHandler(async (req, res) => {
+  const rawDomains = Array.isArray(req.body?.domains) ? req.body.domains : null;
+  if (!rawDomains || rawDomains.length === 0) {
+    return res.status(400).json({ error: 'Provide a non-empty array of domains' });
+  }
+
+  const { rows: userRows } = await pool.query(
+    `select subscription_status from public.users where id = $1`,
+    [req.user!.id]
+  );
+  const subscriptionStatus = userRows[0]?.subscription_status ?? 'free';
+
+  const { rows: countRows } = await pool.query(
+    `select count(*)::int as count from public.tracked_domains where user_id = $1`,
+    [req.user!.id]
+  );
+  let remaining = subscriptionStatus === 'active' ? Infinity : env.freeTierDomainLimit - countRows[0].count;
+
+  const added: string[] = [];
+  const skipped: { domain: string; reason: string }[] = [];
+
+  // Sequential so the free-tier remaining-slot count stays correct as we go,
+  // and so one bad row can't abort the rest of an otherwise-valid batch.
+  for (const raw of rawDomains) {
+    const domain = typeof raw === 'string' ? normalizeDomain(raw) : null;
+    if (!domain) {
+      skipped.push({ domain: String(raw), reason: 'Invalid domain' });
+      continue;
+    }
+    if (remaining <= 0) {
+      skipped.push({ domain, reason: 'Free tier limit reached' });
+      continue;
+    }
+
+    try {
+      await pool.query(`insert into public.tracked_domains (user_id, domain) values ($1, $2)`, [
+        req.user!.id,
+        domain,
+      ]);
+      added.push(domain);
+      remaining--;
+    } catch (err: any) {
+      skipped.push({ domain, reason: err.code === '23505' ? 'Already tracked' : 'Failed to add' });
+    }
+  }
+
+  res.json({ added, skipped });
 }));
 
 // Registered before '/:id' -- otherwise Express would match "stats" as an id.
@@ -212,6 +264,39 @@ domainsRouter.patch('/:id', asyncHandler(async (req, res) => {
   }
 
   res.json({ domain: rows[0] });
+}));
+
+domainsRouter.post('/:id/check', asyncHandler(async (req, res) => {
+  const { rows } = await pool.query<TrackedDomainRow>(
+    `select d.id, d.domain, d.user_id, u.email, u.subscription_status, u.webhook_url, u.alert_thresholds, u.alert_recipients
+     from public.tracked_domains d
+     join public.users u on u.id = d.user_id
+     where d.id = $1 and d.user_id = $2`,
+    [req.params.id, req.user!.id]
+  );
+
+  if (rows.length === 0) {
+    return res.status(404).json({ error: 'Domain not found' });
+  }
+
+  const { rows: lastCheckRows } = await pool.query(
+    `select checked_at from public.check_results where domain_id = $1 order by checked_at desc limit 1`,
+    [req.params.id]
+  );
+  const lastCheckedAt = lastCheckRows[0]?.checked_at as string | undefined;
+  if (lastCheckedAt) {
+    const msSinceLastCheck = Date.now() - new Date(lastCheckedAt).getTime();
+    if (msSinceLastCheck < CHECK_NOW_COOLDOWN_MS) {
+      const retryAfterSeconds = Math.ceil((CHECK_NOW_COOLDOWN_MS - msSinceLastCheck) / 1000);
+      return res.status(429).json({
+        error: `This domain was just checked -- try again in ${Math.ceil(retryAfterSeconds / 60)} min.`,
+        retryAfterSeconds,
+      });
+    }
+  }
+
+  await checkOneDomain(rows[0]);
+  res.json({ ok: true });
 }));
 
 domainsRouter.patch('/:id/share', asyncHandler(async (req, res) => {
