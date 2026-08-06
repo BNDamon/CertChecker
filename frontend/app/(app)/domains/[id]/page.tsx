@@ -183,7 +183,7 @@ export default function DomainDetailPage() {
         <p className="text-sm text-slate-400">No checks have run yet -- the daily job hasn&apos;t reached this domain.</p>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
-          <div className="grid grid-cols-[160px,1fr,1fr] gap-4 border-b border-slate-800 px-5 py-2.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+          <div className="hidden gap-4 border-b border-slate-800 px-5 py-2.5 text-xs font-medium uppercase tracking-wide text-slate-500 sm:grid sm:grid-cols-[160px,1fr,1fr]">
             <span>Checked</span>
             <span>SSL certificate</span>
             <span>Registration</span>
@@ -193,22 +193,31 @@ export default function DomainDetailPage() {
               const hSslDays = daysUntil(h.ssl_expiry_date);
               const hDomainDays = daysUntil(h.domain_expiry_date);
               return (
-                <div key={h.checked_at} className="grid grid-cols-[160px,1fr,1fr] items-center gap-4 px-5 py-3">
+                <div
+                  key={h.checked_at}
+                  className="flex flex-col gap-2 px-4 py-3 sm:grid sm:grid-cols-[160px,1fr,1fr] sm:items-center sm:gap-4 sm:px-5"
+                >
                   <span className="text-xs text-slate-500">{new Date(h.checked_at).toLocaleString()}</span>
-                  <StatusBadge
-                    tone={h.ssl_status === 'error' ? 'unknown' : urgencyTone(hSslDays)}
-                    label={h.ssl_status === 'error' ? 'Check failed' : formatCountdown(hSslDays)}
-                  />
-                  <StatusBadge
-                    tone={h.domain_status === 'error' || h.domain_status === 'unknown' ? 'unknown' : urgencyTone(hDomainDays)}
-                    label={
-                      h.domain_status === 'error'
-                        ? 'Check failed'
-                        : h.domain_status === 'unknown'
-                          ? 'Unknown'
-                          : formatCountdown(hDomainDays)
-                    }
-                  />
+                  <div className="flex items-center justify-between sm:block">
+                    <span className="text-xs text-slate-500 sm:hidden">SSL certificate</span>
+                    <StatusBadge
+                      tone={h.ssl_status === 'error' ? 'unknown' : urgencyTone(hSslDays)}
+                      label={h.ssl_status === 'error' ? 'Check failed' : formatCountdown(hSslDays)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between sm:block">
+                    <span className="text-xs text-slate-500 sm:hidden">Registration</span>
+                    <StatusBadge
+                      tone={h.domain_status === 'error' || h.domain_status === 'unknown' ? 'unknown' : urgencyTone(hDomainDays)}
+                      label={
+                        h.domain_status === 'error'
+                          ? 'Check failed'
+                          : h.domain_status === 'unknown'
+                            ? 'Unknown'
+                            : formatCountdown(hDomainDays)
+                      }
+                    />
+                  </div>
                 </div>
               );
             })}

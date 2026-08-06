@@ -60,7 +60,7 @@ export default function AlertsPage() {
 
       {!loading && !error && alerts.length > 0 && (
         <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
-          <div className="grid grid-cols-[1fr,140px,140px,180px] gap-4 border-b border-slate-800 px-5 py-2.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+          <div className="hidden gap-4 border-b border-slate-800 px-5 py-2.5 text-xs font-medium uppercase tracking-wide text-slate-500 sm:grid sm:grid-cols-[1fr,140px,140px,180px]">
             <span>Domain</span>
             <span>Type</span>
             <span>Threshold</span>
@@ -68,7 +68,10 @@ export default function AlertsPage() {
           </div>
           <div className="divide-y divide-slate-800/80">
             {alerts.map((a) => (
-              <div key={a.id} className="grid grid-cols-[1fr,140px,140px,180px] items-center gap-4 px-5 py-3.5">
+              <div
+                key={a.id}
+                className="flex flex-col gap-1.5 px-4 py-3.5 sm:grid sm:grid-cols-[1fr,140px,140px,180px] sm:items-center sm:gap-4 sm:px-5"
+              >
                 <Link href={`/domains/${a.domain_id}`} className="truncate text-sm font-medium text-slate-100 hover:underline">
                   {a.domain}
                 </Link>

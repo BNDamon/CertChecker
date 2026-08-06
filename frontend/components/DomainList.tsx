@@ -60,7 +60,7 @@ export function DomainList({
   return (
     <>
       <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 shadow-xl shadow-black/20">
-        <div className="grid grid-cols-[1fr,140px,140px,120px,40px] gap-4 border-b border-slate-800 px-5 py-2.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+        <div className="hidden gap-4 border-b border-slate-800 px-5 py-2.5 text-xs font-medium uppercase tracking-wide text-slate-500 sm:grid sm:grid-cols-[1fr,140px,140px,120px,40px]">
           <span>Domain</span>
           <span>SSL certificate</span>
           <span>Registration</span>
@@ -78,30 +78,44 @@ export function DomainList({
             return (
               <div
                 key={d.id}
-                className="group grid grid-cols-[1fr,140px,140px,120px,40px] items-center gap-4 px-5 py-3.5 transition-colors hover:bg-slate-800/40"
+                className="group flex flex-col gap-2.5 px-4 py-3.5 transition-colors hover:bg-slate-800/40 sm:grid sm:grid-cols-[1fr,140px,140px,120px,40px] sm:items-center sm:gap-4 sm:px-5"
               >
-                <div className="min-w-0">
-                  <Link href={`/domains/${d.id}`} className="flex items-center gap-2.5 truncate hover:underline">
-                    <GlobeIcon className="h-4 w-4 shrink-0 text-slate-500" />
-                    <span className="truncate text-sm font-medium text-slate-100">{d.domain}</span>
-                  </Link>
-                  <div className="mt-0.5 pl-6">
-                    <InlineLabel domainId={d.id} label={d.label} onSaved={onDomainUpdated} />
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <Link href={`/domains/${d.id}`} className="flex items-center gap-2.5 truncate hover:underline">
+                      <GlobeIcon className="h-4 w-4 shrink-0 text-slate-500" />
+                      <span className="truncate text-sm font-medium text-slate-100">{d.domain}</span>
+                    </Link>
+                    <div className="mt-0.5 pl-6">
+                      <InlineLabel domainId={d.id} label={d.label} onSaved={onDomainUpdated} />
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setPendingRemoval(d)}
+                    aria-label={`Remove ${d.domain}`}
+                    className="shrink-0 rounded-md p-1.5 text-slate-500 hover:bg-red-500/10 hover:text-red-400 sm:hidden"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
                 </div>
-                <div>
+                <div className="flex items-center justify-between sm:block">
+                  <span className="text-xs text-slate-500 sm:hidden">SSL certificate</span>
                   <StatusBadge tone={sslTone} label={sslLabel(d, sslDays)} />
                 </div>
-                <div>
+                <div className="flex items-center justify-between sm:block">
+                  <span className="text-xs text-slate-500 sm:hidden">Registration</span>
                   <StatusBadge tone={domainTone} label={domainLabel(d, domainDays)} />
                 </div>
-                <span className="truncate text-xs text-slate-500">
-                  {d.checked_at ? new Date(d.checked_at).toLocaleDateString() : 'Pending'}
-                </span>
+                <div className="flex items-center justify-between sm:block">
+                  <span className="text-xs text-slate-500 sm:hidden">Last checked</span>
+                  <span className="truncate text-xs text-slate-500">
+                    {d.checked_at ? new Date(d.checked_at).toLocaleDateString() : 'Pending'}
+                  </span>
+                </div>
                 <button
                   onClick={() => setPendingRemoval(d)}
                   aria-label={`Remove ${d.domain}`}
-                  className="justify-self-end rounded-md p-1.5 text-slate-600 opacity-0 transition-colors hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                  className="hidden rounded-md p-1.5 text-slate-600 opacity-0 transition-colors hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100 sm:block sm:justify-self-end"
                 >
                   <TrashIcon className="h-4 w-4" />
                 </button>
